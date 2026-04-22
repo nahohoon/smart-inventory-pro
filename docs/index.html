@@ -462,7 +462,7 @@ tr:hover td{background:#fafbfc}
     <div class="lf"><label>비밀번호</label><input id="loginPw" type="password" placeholder="비밀번호 입력" autocomplete="current-password"></div>
     <button id="loginBtn">로그인</button>
     <div id="loginErr"></div>
-    <div class="login-footer">스마트공장 납품형 v9</div>
+    <div class="login-footer">스마트공장 납품형 v10 · <span id="loginBuildVer"></span></div>
   </div>
 </div>
 
@@ -474,7 +474,7 @@ tr:hover td{background:#fafbfc}
     <aside class="side">
       <div class="side-brand">
         <span class="brand-logo" id="sLogo">KY</span><span class="brand-name" id="sName">KY 재고관리</span>
-        <div class="brand-sub" id="sSub">스마트공장 납품형 v9</div>
+        <div class="brand-sub" id="sSub">스마트공장 납품형 v10 · <span id="sideBuildVer"></span></div>
       </div>
       <div class="nav-sec">메인</div>
       <button class="nav-btn on" data-tab="dash"><span class="ico">🏠</span>대시보드</button>
@@ -958,11 +958,18 @@ tr:hover td{background:#fafbfc}
                 </div>
                 <hr style="border:none;border-top:1px solid #f1f5f9">
                 <div>
-                  <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:6px">🔧 캐시 관리</div>
-                  <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">
-                    시스템 업데이트 후 화면이 이전 버전으로 보이면 캐시를 초기화하세요.
+                  <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px">🔧 버전 / 캐시 상태</div>
+                  <div id="buildStatusBox" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;font-size:11px;line-height:2;color:#475569;margin-bottom:10px">
+                    <div>앱 빌드: <strong id="statusBuildId" style="color:#1e3a8a;font-family:monospace">확인 중...</strong></div>
+                    <div>SW 빌드: <strong id="statusSwBuildId" style="color:#1e3a8a;font-family:monospace">확인 중...</strong></div>
+                    <div>GAS URL: <strong id="statusGasUrl" style="color:#059669;word-break:break-all">확인 중...</strong></div>
+                    <div>연결 출처: <strong id="statusGasSource" style="color:#7c3aed">-</strong></div>
                   </div>
-                  <button class="btn sec" onclick="swClearCache()" style="font-size:12px;padding:9px 14px">🗑️ 캐시 초기화</button>
+                  <div style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="btn sec" onclick="refreshBuildStatus()" style="font-size:12px;padding:9px 14px">🔍 상태 확인</button>
+                    <button class="btn sec" onclick="swClearCache()" style="font-size:12px;padding:9px 14px">🗑️ 캐시 초기화</button>
+                    <button class="btn dan" onclick="hardReload()" style="font-size:12px;padding:9px 14px">🔄 강제 새로고침</button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1069,14 +1076,45 @@ var CONFIG = {
     { id: 'staff1', pw: '1234',      name: '담당자1', role: 'staff'  },
     { id: 'view1',  pw: '1234',      name: '조회자1', role: 'viewer' }
   ],
-  SEED_ITEMS: []
+  SEED_ITEMS: [],
+
+  /* ★ 빌드 식별자 — sw.js의 BUILD_ID와 동일하게 유지 ★
+     배포 시 sw.js BUILD_ID와 함께 이 값도 교체하세요.       */
+  BUILD_ID:    '20260422_1428'
 };
 
 /* ─── localStorage ─── */
 var P = 'inv_' + CONFIG.CLIENT_ID + '_';
-var KEYS = { S: P+'settings', M: P+'master', T: P+'tx', SYNC: P+'syncTime' };
+var KEYS = { S: P+'settings', M: P+'master', T: P+'tx', SYNC: P+'syncTime',
+             VER: P+'build_ver' };
 function lsGet(k,def){try{var v=localStorage.getItem(k);return v!==null?JSON.parse(v):def;}catch(e){return def;}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
+
+/* ══ localStorage 스키마 마이그레이션 ══
+   새 빌드 배포 시 구버전 설정값 충돌 방지.
+   BUILD_ID가 바뀌었으면 gasUrl / useGas 강제 초기화.
+   데이터(품목·이력)는 건드리지 않음.              */
+(function migrateLocalStorage() {
+  var savedVer = lsGet(KEYS.VER, '');
+  if(savedVer === CONFIG.BUILD_ID) return; /* 동일 버전 → 스킵 */
+
+  console.log('[MIGRATE] 구버전:', savedVer, '→ 신버전:', CONFIG.BUILD_ID);
+
+  var stored = lsGet(KEYS.S, null);
+  if(stored) {
+    /* gasUrl: 빈값이거나 이상 값이면 초기화 (CONFIG.GAS_URL로 덮어씀) */
+    var needsReset = false;
+    if(!stored.gasUrl || stored.gasUrl === '') needsReset = true;
+    /* useGas: CONFIG.GAS_URL 있으면 Y, 없으면 N으로 맞춤 */
+    stored.useGas = CONFIG.GAS_URL ? 'Y' : 'N';
+    if(needsReset) stored.gasUrl = '';  /* → getEffectiveGasUrl이 CONFIG 값 사용 */
+    lsSet(KEYS.S, stored);
+    console.log('[MIGRATE] gasUrl 리셋:', needsReset, '/ useGas:', stored.useGas);
+  }
+
+  /* 버전 기록 */
+  lsSet(KEYS.VER, CONFIG.BUILD_ID);
+})();
 /* ── GAS URL 결정 함수 (핵심 fallback 로직) ──
    우선순위: ① localStorage 저장값 → ② CONFIG.GAS_URL 내장값
    localStorage에 저장된 값이 없거나 빈값이면 CONFIG 값 사용.
@@ -2465,111 +2503,234 @@ updateShortBadge = function(n) {
 
 </script>
 
-<!-- ══ PWA: Service Worker 등록 v2 ══ -->
+<!-- ══ PWA: Service Worker 등록 v3 ══ -->
 <script>
 (function(){
   'use strict';
 
+  /* ── 빌드 버전 UI 반영 ── */
+  function setBuildUI(appBuild, swBuild) {
+    var els = {
+      loginBuildVer:   document.getElementById('loginBuildVer'),
+      sideBuildVer:    document.getElementById('sideBuildVer'),
+      statusBuildId:   document.getElementById('statusBuildId'),
+      statusSwBuildId: document.getElementById('statusSwBuildId')
+    };
+    var appStr = appBuild || (window.CONFIG && CONFIG.BUILD_ID) || '?';
+    var swStr  = swBuild  || '로딩 중...';
+    if(els.loginBuildVer)   els.loginBuildVer.textContent   = 'build.' + appStr;
+    if(els.sideBuildVer)    els.sideBuildVer.textContent    = 'build.' + appStr;
+    if(els.statusBuildId)   els.statusBuildId.textContent   = appStr;
+    if(els.statusSwBuildId) els.statusSwBuildId.textContent = swStr;
+    /* 앱/SW 빌드 불일치 경고 */
+    if(swBuild && appStr !== swStr) {
+      var box = document.getElementById('buildStatusBox');
+      if(box) box.style.borderColor = '#fbbf24';
+      console.warn('[PWA] 앱/SW 빌드 불일치 — 강제 새로고침 필요:', appStr, '≠', swStr);
+    }
+  }
+
+  /* ── GAS URL 상태 UI 반영 ── */
+  function setGasStatusUI() {
+    var urlEl   = document.getElementById('statusGasUrl');
+    var srcEl   = document.getElementById('statusGasSource');
+    if(!urlEl || !srcEl) return;
+
+    var inputEl  = document.getElementById('setGasUrl');
+    var fromInput = inputEl ? inputEl.value.trim() : '';
+    var fromLS    = (function(){
+      try{
+        var s = JSON.parse(localStorage.getItem(
+          'inv_' + (CONFIG.CLIENT_ID||'smartinv') + '_settings'
+        ));
+        return s && s.gasUrl ? s.gasUrl.trim() : '';
+      }catch(e){ return ''; }
+    })();
+    var fromConfig = (window.CONFIG && CONFIG.GAS_URL) ? CONFIG.GAS_URL : '';
+
+    var activeUrl, source;
+    if(fromInput)       { activeUrl = fromInput;   source = '📝 입력칸 (미저장)'; }
+    else if(fromLS)     { activeUrl = fromLS;       source = '💾 localStorage'; }
+    else if(fromConfig) { activeUrl = fromConfig;   source = '⚙️ CONFIG 내장값'; }
+    else                { activeUrl = '(없음)';     source = '❌ 설정 필요'; }
+
+    var short = activeUrl.length > 40 ? activeUrl.slice(0,20)+'...'+activeUrl.slice(-15) : activeUrl;
+    urlEl.textContent = short;
+    srcEl.textContent = source;
+
+    /* 색상 */
+    urlEl.style.color = activeUrl === '(없음)' ? '#dc2626' : '#059669';
+    srcEl.style.color = fromInput ? '#d97706' : (fromLS ? '#2563eb' : '#7c3aed');
+  }
+
+  /* ── 설정 탭 열릴 때 상태 자동 갱신 ── */
+  window.refreshBuildStatus = function() {
+    setBuildUI(null, null);
+    setGasStatusUI();
+    /* SW에 빌드ID 요청 */
+    if(navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'GET_BUILD_ID' });
+    }
+    try { toast('상태를 확인했습니다'); } catch(e) {}
+  };
+
+  /* ── 강제 새로고침 ── */
+  window.hardReload = function() {
+    if(navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
+    }
+    setTimeout(function() {
+      window.location.reload(true);
+    }, 300);
+  };
+
+  /* ── SW 메시지 수신 ── */
+  if('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', function(e) {
+      if(!e.data) return;
+      switch(e.data.type) {
+        case 'SW_UPDATED':
+          /* SW가 새 버전으로 교체됨 → 빌드ID 반영 + 토스트 */
+          console.log('[PWA] SW 업데이트 완료:', e.data.buildId);
+          setBuildUI(
+            window.CONFIG ? CONFIG.BUILD_ID : null,
+            e.data.buildId
+          );
+          try { toast('✅ 앱이 최신 버전으로 업데이트되었습니다'); } catch(ex) {}
+          break;
+        case 'BUILD_ID':
+          setBuildUI(
+            window.CONFIG ? CONFIG.BUILD_ID : null,
+            e.data.buildId
+          );
+          break;
+      }
+    });
+  }
+
   /* ── Service Worker 등록 ── */
-  if ('serviceWorker' in navigator) {
+  if('serviceWorker' in navigator) {
     window.addEventListener('load', function() {
       navigator.serviceWorker.register('./sw.js', { scope: './' })
         .then(function(reg) {
-          console.log('[SW] 등록 완료:', reg.scope);
+          console.log('[SW] 등록:', reg.scope);
 
-          /* 새 버전 감지 → 토스트 + 새로고침 유도 */
+          /* 앱 빌드 ID 표시 */
+          setBuildUI(window.CONFIG ? CONFIG.BUILD_ID : null, null);
+
+          /* SW에 빌드ID 즉시 요청 */
+          var sw = reg.active || reg.installing || reg.waiting;
+          if(sw) sw.postMessage({ type: 'GET_BUILD_ID' });
+
+          /* 새 SW 감지 */
           reg.addEventListener('updatefound', function() {
             var newSW = reg.installing;
-            if (!newSW) return;
+            if(!newSW) return;
             newSW.addEventListener('statechange', function() {
-              if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-                /* 새 버전 설치됨 → 사용자에게 안내 */
-                toast('🔄 새 버전 준비 완료 — 새로고침하면 적용됩니다');
+              if(newSW.state === 'installed') {
+                if(navigator.serviceWorker.controller) {
+                  /* 새 버전 대기 중 → 즉시 적용 요청 */
+                  newSW.postMessage({ type: 'SKIP_WAITING' });
+                  try { toast('🔄 최신 버전 적용 중... 잠시 후 새로고침됩니다'); } catch(ex) {}
+                }
               }
             });
           });
         })
         .catch(function(err) {
           console.warn('[SW] 등록 실패:', err);
+          setBuildUI(window.CONFIG ? CONFIG.BUILD_ID : null, 'SW 오류');
         });
 
-      /* 다른 탭에서 SW가 업데이트되면 이 탭도 자동 새로고침 */
+      /* SW controller 교체 시 자동 새로고침 */
       var refreshing = false;
       navigator.serviceWorker.addEventListener('controllerchange', function() {
-        if (!refreshing) { refreshing = true; window.location.reload(); }
+        if(!refreshing) { refreshing = true; window.location.reload(); }
       });
+    });
+  } else {
+    /* SW 미지원 환경 */
+    document.addEventListener('DOMContentLoaded', function() {
+      setBuildUI(window.CONFIG ? CONFIG.BUILD_ID : null, 'SW 미지원');
     });
   }
 
-  /* ── SW 메시지 헬퍼 (설정 탭 캐시 초기화 버튼용) ── */
+  /* ── SW 메시지 헬퍼 ── */
   window.swClearCache = function() {
-    if (!navigator.serviceWorker.controller) {
-      toast('Service Worker가 활성화되지 않았습니다');
-      return;
+    if(navigator.serviceWorker && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
+      try { toast('✅ 캐시를 초기화했습니다'); } catch(e) {}
+    } else {
+      try { toast('Service Worker가 활성화되지 않았습니다'); } catch(e) {}
     }
-    navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
-    toast('✅ 캐시를 초기화했습니다 — 새로고침 후 적용됩니다');
   };
 
-  /* ── PWA 홈화면 설치 배너 (Android Chrome) ── */
-  var _deferredPrompt = null;
-
+  /* ── PWA 설치 배너 ── */
+  var _prompt = null;
   window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
-    _deferredPrompt = e;
+    _prompt = e;
     var btn = document.getElementById('pwaInstallBtn');
-    if (btn) btn.style.display = 'flex';
+    if(btn) btn.style.display = 'flex';
   });
 
   window.pwaInstall = function() {
-    if (!_deferredPrompt) {
-      /* 이미 설치됐거나 iOS → 설정 탭 안내로 이동 */
-      try { goTab('settings'); } catch(ex) {}
-      return;
-    }
-    _deferredPrompt.prompt();
-    _deferredPrompt.userChoice.then(function(result) {
-      _deferredPrompt = null;
+    if(!_prompt) { try { goTab('settings'); } catch(ex) {} return; }
+    _prompt.prompt();
+    _prompt.userChoice.then(function(r) {
+      _prompt = null;
       var btn = document.getElementById('pwaInstallBtn');
-      if (btn) btn.style.display = 'none';
-      if (result.outcome === 'accepted') {
-        toast('✅ 홈화면에 설치되었습니다');
-      }
+      if(btn) btn.style.display = 'none';
+      if(r.outcome === 'accepted') try { toast('✅ 홈화면에 설치되었습니다'); } catch(ex) {}
     });
   };
 
   window.addEventListener('appinstalled', function() {
-    toast('📱 홈화면에 추가되었습니다!');
+    try { toast('📱 홈화면에 추가되었습니다!'); } catch(e) {}
     var btn = document.getElementById('pwaInstallBtn');
-    if (btn) btn.style.display = 'none';
+    if(btn) btn.style.display = 'none';
   });
 
   /* ── 온라인/오프라인 감지 ── */
   function syncOnlineUI() {
     var chip = document.getElementById('onlineChip');
-    if (!chip) return;
-    if (navigator.onLine) {
-      chip.textContent = '🟢 온라인';
-      chip.className   = 'chip green';
+    if(!chip) return;
+    if(navigator.onLine) {
+      chip.textContent = '🟢 온라인'; chip.className = 'chip green';
     } else {
-      chip.textContent = '🔴 오프라인';
-      chip.className   = 'chip red';
-      toast('⚠️ 오프라인 — 로컬 데이터로 동작합니다');
+      chip.textContent = '🔴 오프라인'; chip.className = 'chip red';
+      try { toast('⚠️ 오프라인 — 로컬 데이터로 동작합니다'); } catch(e) {}
     }
   }
   window.addEventListener('online',  syncOnlineUI);
   window.addEventListener('offline', syncOnlineUI);
   document.addEventListener('DOMContentLoaded', syncOnlineUI);
 
-  /* ── standalone(설치된 앱) 모드 감지 ── */
+  /* ── standalone 감지 ── */
   var isStandalone = window.matchMedia('(display-mode: standalone)').matches
                   || window.navigator.standalone === true;
-  if (isStandalone) {
+  if(isStandalone) {
     document.documentElement.classList.add('pwa-standalone');
-    /* 설치된 앱 모드에서 상단 설치 버튼 항상 숨김 */
     var btn = document.getElementById('pwaInstallBtn');
-    if (btn) btn.style.display = 'none';
+    if(btn) btn.style.display = 'none';
   }
+
+  /* ── 설정 탭 열릴 때 GAS 상태 자동 갱신 (goTab 훅) ── */
+  document.addEventListener('DOMContentLoaded', function() {
+    var origGoTab = window.goTab;
+    if(origGoTab) {
+      window.goTab = function(name) {
+        origGoTab(name);
+        if(name === 'settings') {
+          setTimeout(setGasStatusUI, 100);
+          refreshBuildStatus();
+        }
+      };
+    }
+    /* 초기 빌드 ID 표시 */
+    setBuildUI(window.CONFIG ? CONFIG.BUILD_ID : null, null);
+  });
+
 })();
 </script>
 
