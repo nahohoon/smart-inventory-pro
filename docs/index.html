@@ -519,13 +519,20 @@ tr:hover td{background:#fafbfc}
 
         <!-- ━━ 대시보드 ━━ -->
         <div class="tab on" id="tab-dash">
+          <!-- 연결 상태 배너 — JS가 동적으로 내용/색상 교체 -->
           <div id="sync-banner">
-            <span style="font-size:18px">📡</span>
+            <span style="font-size:18px" id="syncBannerIco">📡</span>
             <div style="flex:1">
-              <div style="font-weight:800;font-size:13px;color:#854d0e">미연결 — 로컬 데이터 표시 중</div>
-              <div style="font-size:12px;color:#a16207;margin-top:2px">설정 탭에서 GAS URL 입력 후 동기화 버튼을 눌러주세요.</div>
+              <div style="font-weight:800;font-size:13px" id="syncBannerTitle">연결 확인 중...</div>
+              <div style="font-size:12px;margin-top:2px" id="syncBannerSub">GAS URL을 확인하고 있습니다.</div>
             </div>
-            <button class="btn sec" style="font-size:12px;padding:7px 12px" onclick="goTab('settings')">⚙️ 설정</button>
+            <button class="btn sec" style="font-size:12px;padding:7px 12px" id="syncBannerBtn" onclick="manualSync()">🔄 동기화</button>
+          </div>
+          <!-- 동기화 상태 칩 행 -->
+          <div id="syncStatusRow" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+            <span class="chip gray" id="syncStateChip">⏳ 로딩 중...</span>
+            <span class="chip gray" id="syncTimeChip2" style="font-size:11px">마지막 동기화: -</span>
+            <span class="chip gray" id="gasUrlChip" style="font-size:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">GAS: 확인 중</span>
           </div>
           <div class="kpi-row">
             <div class="kpi-card navy"><div class="kpi-ico">📦</div><div class="kpi-lbl">총 품목 수</div><div class="kpi-val" id="kpiItems">0</div><div class="kpi-meta">품목마스터 기준</div></div>
@@ -1066,7 +1073,7 @@ var CONFIG = {
   /* ★ 실운영 GAS URL — 이 값이 모든 기기의 기본값이 됩니다 ★
      배포 후 여기에 Apps Script URL을 붙여넣으면
      카톡 링크로 접속한 누구든 설정 없이 바로 사용합니다.      */
-  GAS_URL:     '',
+  GAS_URL:     'https://script.google.com/macros/s/AKfycbwkvK3UdQVAm8L7B4fM-P_24hbmkGUCzgjFiNb6ne0bVmjJ37NWDOHRx_kfhWsbGnitmg/exec',
 
   THEME_C1:    '#1e3a8a',
   THEME_C2:    '#2563eb',
@@ -1080,7 +1087,7 @@ var CONFIG = {
 
   /* ★ 빌드 식별자 — sw.js의 BUILD_ID와 동일하게 유지 ★
      배포 시 sw.js BUILD_ID와 함께 이 값도 교체하세요.       */
-  BUILD_ID:    '20260422_1428'
+  BUILD_ID:    '20260422_1450'
 };
 
 /* ─── localStorage ─── */
@@ -1207,8 +1214,7 @@ function kyRestoreSession() {
 /* 세션 자동복구: 페이지 로드 시 즉시 실행 (동기) */
 (function autoRestoreSession() {
   var user = kyRestoreSession();
-  if (!user) return; /* 세션 없으면 loginScreen 그대로 표시됨 */
-  /* 세션 있으면 바로 앱으로 진입 */
+  if (!user) return;
   G_USER = user;
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appWrap').style.display = 'flex';
@@ -1220,18 +1226,11 @@ function kyRestoreSession() {
   try { applySettingsToForm(true); } catch(e) {}
   try { document.getElementById('todayTxt').textContent =
     new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'}); } catch(e) {}
-  try { renderDash(); } catch(e) {}
-  try { renderHist(); } catch(e) {}
-  try { renderStock(); } catch(e) {}
-  try { renderShort(); } catch(e) {}
-  try { renderMaster(); } catch(e) {}
-  try { toast(user.name + '님 자동 로그인'); } catch(e) {}
-  /* sync-banner: GAS URL 내장 시 숨김 */
-  try {
-    var sb = document.getElementById('sync-banner');
-    if(sb){ if(getEffectiveGasUrl()) sb.classList.remove('show'); else sb.classList.add('show'); }
-  } catch(e) {}
-  try { startAutoSync(); } catch(e) {}
+  /* 로컬 데이터로 즉시 화면 채우기 */
+  try { renderDash(); renderHist(); renderStock(); renderShort(); renderMaster(); } catch(e) {}
+  toast(user.name + '님 자동 로그인');
+  /* GAS 초기 로딩 — 비동기 즉시 실행 */
+  initialLoad().catch(function(e){ console.error('[autoRestore] initialLoad 오류:', e); });
 })();
 
 function doLogin(){
@@ -1255,24 +1254,12 @@ function doLogin(){
   try{initWhSelects();}catch(e){}
   try{fillNow();}catch(e){}
   try{applySettingsToForm(true);}catch(e){}
-  try{var sb=document.getElementById('sync-banner');if(sb)sb.classList.add('show');}catch(e){}
   try{document.getElementById('todayTxt').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});}catch(e){}
-  try{renderDash();}catch(e){}
-  try{renderHist();}catch(e){}
-  try{renderStock();}catch(e){}
-  try{renderShort();}catch(e){}
-  try{renderMaster();}catch(e){}
+  /* 로컬 데이터로 즉시 화면 채우기 */
+  try{renderDash();renderHist();renderStock();renderShort();renderMaster();}catch(e){}
   toast(user.name+'님 로그인 완료');
-  /* sync-banner: GAS URL이 이미 설정된 경우 숨김 */
-  try{
-    var sb=document.getElementById('sync-banner');
-    if(sb){
-      var effUrl = getEffectiveGasUrl();
-      if(effUrl) sb.classList.remove('show');
-      else sb.classList.add('show');
-    }
-  }catch(e){}
-  try{ startAutoSync(); }catch(e){}
+  /* GAS 초기 로딩 — 비동기 즉시 실행 */
+  initialLoad().catch(function(e){ console.error('[doLogin] initialLoad 오류:', e); });
 }
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 document.getElementById('loginPw').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
@@ -2180,14 +2167,177 @@ function _jsonpGAS(url, qs) {
   });
 }
 
-/* ── 현재 유효한 GAS URL 반환 (공통) ──
+/* ── 현재 유효한 GAS URL 반환 (공통)
    1순위: 설정 입력칸 현재 value
    2순위: localStorage 저장값
-   3순위: CONFIG.GAS_URL 내장값                */
+   3순위: CONFIG.GAS_URL 내장값        */
 function _getActiveGasUrl() {
   var el = document.getElementById('setGasUrl');
   if(el && el.value.trim()) return el.value.trim();
   return getEffectiveGasUrl() || CONFIG.GAS_URL;
+}
+
+/* ══════════════════════════════════════════════════
+   초기 데이터 로딩 — 로그인 직후 즉시 실행
+   우선순위: 입력칸 → localStorage → CONFIG.GAS_URL
+   결과에 따라 대시보드 배너·상태칩 업데이트
+══════════════════════════════════════════════════ */
+
+/* 배너 상태 업데이트 헬퍼 */
+function _setSyncBanner(state, title, sub, btnLabel, btnAction) {
+  var banner = document.getElementById('sync-banner');
+  var ico    = document.getElementById('syncBannerIco');
+  var ttl    = document.getElementById('syncBannerTitle');
+  var sb     = document.getElementById('syncBannerSub');
+  var btn    = document.getElementById('syncBannerBtn');
+  if(!banner) return;
+
+  var styles = {
+    loading:  { bg:'#f0f9ff', border:'#bae6fd', titleColor:'#0369a1', subColor:'#0284c7',  ico:'⏳' },
+    ok:       { bg:'#f0fdf4', border:'#86efac', titleColor:'#15803d', subColor:'#16a34a',  ico:'✅' },
+    error:    { bg:'#fff7ed', border:'#fed7aa', titleColor:'#c2410c', subColor:'#ea580c',  ico:'⚠️' },
+    nourl:    { bg:'#fefce8', border:'#fde047', titleColor:'#854d0e', subColor:'#a16207',  ico:'📡' },
+  };
+  var st = styles[state] || styles.nourl;
+
+  banner.style.cssText = 'display:flex;background:'+st.bg+';border:1.5px solid '+st.border+
+    ';border-radius:12px;padding:12px 16px;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px';
+  if(ico) ico.textContent = st.ico;
+  if(ttl) { ttl.textContent = title; ttl.style.color = st.titleColor; }
+  if(sb)  { sb.textContent  = sub;   sb.style.color  = st.subColor; }
+  if(btn) { btn.textContent = btnLabel || '🔄 동기화';
+            btn.onclick = btnAction || function(){ manualSync(); }; }
+}
+
+/* 상태칩 업데이트 */
+function _setSyncChip(state, label) {
+  var chip = document.getElementById('syncStateChip');
+  if(!chip) return;
+  chip.textContent = label;
+  chip.className = 'chip ' + (state === 'ok' ? 'green' : state === 'error' ? 'red' : 'gray');
+}
+
+/* GAS URL 칩 업데이트 */
+function _setGasChip(url) {
+  var chip = document.getElementById('gasUrlChip');
+  if(!chip) return;
+  if(!url) { chip.textContent = 'GAS: 미설정'; chip.className = 'chip red'; return; }
+  var short = url.length > 30 ? url.slice(0,15)+'...'+url.slice(-10) : url;
+  chip.textContent = 'GAS: ' + short;
+  chip.className = 'chip blue';
+}
+
+/* syncTimeChip2 업데이트 */
+function _setSyncTime() {
+  var t = lsGet(KEYS.SYNC,'');
+  var chip = document.getElementById('syncTimeChip2');
+  if(!chip) return;
+  chip.textContent = t
+    ? '동기화: ' + new Date(t).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})
+    : '동기화: 없음';
+}
+
+/* ── 로그인 직후 초기 데이터 로딩 (핵심) ── */
+async function initialLoad() {
+  var url = _getActiveGasUrl();
+
+  /* URL 결정 로그 */
+  var inputEl = document.getElementById('setGasUrl');
+  var fromInput  = inputEl ? inputEl.value.trim() : '';
+  var fromLS     = getEffectiveGasUrl();
+  var fromConfig = CONFIG.GAS_URL;
+  console.log('[GAS] URL 결정 과정:');
+  console.log('  입력칸:', fromInput  || '(없음)');
+  console.log('  localStorage:', fromLS    || '(없음)');
+  console.log('  CONFIG:', fromConfig || '(없음)');
+  console.log('  최종 선택:', url      || '(없음)');
+
+  _setGasChip(url);
+
+  if(!url) {
+    /* URL 없음 → 로컬 모드 */
+    _setSyncBanner('nourl',
+      '미연결 — 로컬 데이터 표시 중',
+      'GAS URL이 설정되지 않았습니다. 설정 탭에서 URL을 입력하세요.',
+      '⚙️ 설정', function(){ goTab('settings'); }
+    );
+    _setSyncChip('gray', '🔌 로컬 모드');
+    console.log('[GAS] URL 없음 → 로컬 모드로 동작');
+    return;
+  }
+
+  /* URL 있음 → 즉시 fetch 시도 */
+  _setSyncBanner('loading', '데이터 불러오는 중...', 'Google Sheets에서 최신 데이터를 가져옵니다.', '⏳ 로딩 중');
+  _setSyncChip('gray', '⏳ 연결 중...');
+
+  try {
+    /* 품목 + 이력 병렬 로딩 */
+    var results = await Promise.allSettled([
+      gasGet('getMasterItems'),
+      gasGet('getTransactions')
+    ]);
+
+    var masterResult = results[0];
+    var txResult     = results[1];
+    var masterOk = false, txOk = false;
+
+    if(masterResult.status === 'fulfilled' && masterResult.value.success && masterResult.value.items) {
+      setMaster(masterResult.value.items);
+      masterOk = true;
+      console.log('[GAS] 품목 로딩 성공:', masterResult.value.items.length, '건');
+    } else {
+      console.warn('[GAS] 품목 로딩 실패:', masterResult.reason || masterResult.value);
+    }
+
+    if(txResult.status === 'fulfilled' && txResult.value.success && txResult.value.transactions) {
+      setTx(txResult.value.transactions);
+      txOk = true;
+      console.log('[GAS] 이력 로딩 성공:', txResult.value.transactions.length, '건');
+    } else {
+      console.warn('[GAS] 이력 로딩 실패:', txResult.reason || txResult.value);
+    }
+
+    lsSet(KEYS.SYNC, new Date().toISOString());
+    _setSyncTime();
+
+    if(masterOk || txOk) {
+      var itemCount = getMaster().length;
+      var txCount   = getTx().length;
+      _setSyncBanner('ok',
+        '✅ 연결 정상 — Google Sheets 데이터 로드 완료',
+        '품목 ' + itemCount + '건 · 이력 ' + txCount + '건 · ' +
+        new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) + ' 동기화',
+        '🔄 새로고침', function(){ manualSync(); }
+      );
+      _setSyncChip('ok', '✅ 연결 정상');
+      /* 화면 즉시 갱신 */
+      renderDash(); renderHist(); renderStock(); renderShort(); renderMaster();
+      /* 자동 동기화 타이머 시작 */
+      startAutoSync();
+    } else {
+      throw new Error('품목/이력 모두 로딩 실패');
+    }
+
+  } catch(err) {
+    console.error('[GAS] 초기 로딩 실패:', err.message);
+    _setSyncBanner('error',
+      '⚠️ Google Sheets 연결 실패 — 로컬 데이터 표시 중',
+      '오류: ' + err.message + ' | 로컬에 저장된 데이터를 표시합니다.',
+      '🔄 재시도', function(){ manualSync(); }
+    );
+    _setSyncChip('error', '❌ 연결 실패');
+    /* 실패해도 로컬 데이터로 화면 갱신 */
+    renderDash(); renderHist(); renderStock(); renderShort(); renderMaster();
+  }
+}
+
+/* ── 수동 동기화 (배너 버튼) ── */
+async function manualSync() {
+  var url = _getActiveGasUrl();
+  if(!url) { goTab('settings'); return; }
+  _setSyncBanner('loading', '동기화 중...', 'Google Sheets에서 데이터를 가져옵니다.', '⏳');
+  _setSyncChip('gray', '⏳ 동기화 중...');
+  await initialLoad();
 }
 
 /* ── 메인 GAS 호출 함수 (fetch → JSONP 자동 폴백) ── */
