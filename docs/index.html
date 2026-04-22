@@ -12,8 +12,49 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>재고관리 시스템</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>KY 재고관리</title>
+
+<!-- ══ PWA 핵심 ══ -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1e3a8a">
+
+<!-- ══ iOS Safari PWA ══ -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KY 재고관리">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
+<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
+<!-- iOS 스플래시 (iPhone 15 Pro 기준) -->
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<!-- ══ Android / 일반 ══ -->
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon.png">
+<link rel="icon" type="image/x-icon" href="favicon.ico">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="application-name" content="KY 재고관리">
+
+<!-- ══ SEO / OG ══ -->
+<meta name="description" content="스마트공장 재고·물류관리 시스템">
+<meta name="robots" content="noindex,nofollow">
+
+<!-- ══ safe-area 대응 (노치/홈바) ══ -->
+<style>
+  :root{
+    --safe-top:    env(safe-area-inset-top,    0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left:   env(safe-area-inset-left,   0px);
+    --safe-right:  env(safe-area-inset-right,  0px);
+  }
+  /* 설치된 앱 모드에서 상태바 공간 확보 */
+  @media all and (display-mode: standalone) {
+    #loginScreen { padding-top: var(--safe-top) }
+    .topbar      { padding-top: calc(var(--safe-top) / 2) }
+    #mobileNav   { padding-bottom: var(--safe-bottom) }
+    .content     { padding-bottom: calc(80px + var(--safe-bottom)) }
+  }
+</style>
 <style>
 /* ══ CSS 변수 기반 테마 시스템 ══ */
 :root{
@@ -463,7 +504,13 @@ tr:hover td{background:#fafbfc}
         </div>
         <div class="tb-right">
           <span class="chip gray" id="todayTxt"></span>
+          <span class="chip green" id="onlineChip" style="font-size:11px">🟢 온라인</span>
           <span class="chip blue" id="compChip">KY 재고관리</span>
+          <!-- Android Chrome: 홈화면 추가 버튼 (자동 표시) -->
+          <button id="pwaInstallBtn" onclick="pwaInstall()" title="홈화면에 설치"
+            style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,var(--c2),var(--c1));color:#fff;border:none;border-radius:9px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
+            📲 설치
+          </button>
           <button id="mobileMenuBtn" onclick="openDrawer()">☰</button>
         </div>
       </div>
@@ -878,6 +925,47 @@ tr:hover td{background:#fafbfc}
                 <div class="btns"><button class="btn pri" onclick="changeMyPassword()">🔒 비밀번호 변경</button></div>
               </div>
             </div>
+            <!-- ── PWA 앱 설치 안내 ── -->
+            <div class="card" id="pwaGuideCard">
+              <div class="card-hd"><h3>📱 홈화면 앱 설치</h3></div>
+              <div class="card-bd" style="display:grid;gap:14px">
+                <!-- Android -->
+                <div id="pwaAndroidGuide">
+                  <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:6px">🤖 Android (Chrome)</div>
+                  <div style="font-size:12px;color:#64748b;line-height:1.8">
+                    주소창 우측 <strong>⋮ 메뉴</strong> → <strong>홈 화면에 추가</strong><br>
+                    또는 상단 <strong>📲 설치</strong> 버튼 클릭
+                  </div>
+                  <div class="btns" style="margin-top:10px">
+                    <button class="btn pri" onclick="pwaInstall()" style="font-size:13px;padding:11px 16px">📲 홈화면에 설치</button>
+                  </div>
+                </div>
+                <hr style="border:none;border-top:1px solid #f1f5f9">
+                <!-- iOS -->
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:6px">🍎 iPhone / iPad (Safari)</div>
+                  <div style="font-size:12px;color:#64748b;line-height:2">
+                    ① Safari에서 이 페이지 열기<br>
+                    ② 하단 <strong>공유 버튼 (□↑)</strong> 탭<br>
+                    ③ <strong>홈 화면에 추가</strong> 선택<br>
+                    ④ 이름 확인 후 <strong>추가</strong>
+                  </div>
+                </div>
+                <hr style="border:none;border-top:1px solid #f1f5f9">
+                <div style="font-size:11px;color:#94a3b8;line-height:1.8">
+                  설치 후 아이콘 실행 시 주소창 없이 앱처럼 동작합니다.<br>
+                  오프라인에서도 기본 화면이 유지됩니다.
+                </div>
+                <hr style="border:none;border-top:1px solid #f1f5f9">
+                <div>
+                  <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:6px">🔧 캐시 관리</div>
+                  <div style="font-size:11px;color:#94a3b8;margin-bottom:8px">
+                    시스템 업데이트 후 화면이 이전 버전으로 보이면 캐시를 초기화하세요.
+                  </div>
+                  <button class="btn sec" onclick="swClearCache()" style="font-size:12px;padding:9px 14px">🗑️ 캐시 초기화</button>
+                </div>
+              </div>
+            </div>
             </div>
           </div>
         </div>
@@ -971,7 +1059,7 @@ var CONFIG = {
   /* ★ 실운영 GAS URL — 이 값이 모든 기기의 기본값이 됩니다 ★
      배포 후 여기에 Apps Script URL을 붙여넣으면
      카톡 링크로 접속한 누구든 설정 없이 바로 사용합니다.      */
-  GAS_URL:     'https://script.google.com/macros/s/AKfycbwkvK3UdQVAm8L7B4fM-P_24hbmkGUCzgjFiNb6ne0bVmjJ37NWDOHRx_kfhWsbGnitmg/exec',
+  GAS_URL:     '',
 
   THEME_C1:    '#1e3a8a',
   THEME_C2:    '#2563eb',
@@ -2374,6 +2462,114 @@ updateShortBadge = function(n) {
   }
 })();
 
+</script>
+
+<!-- ══ PWA: Service Worker 등록 v2 ══ -->
+<script>
+(function(){
+  'use strict';
+
+  /* ── Service Worker 등록 ── */
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('./sw.js', { scope: './' })
+        .then(function(reg) {
+          console.log('[SW] 등록 완료:', reg.scope);
+
+          /* 새 버전 감지 → 토스트 + 새로고침 유도 */
+          reg.addEventListener('updatefound', function() {
+            var newSW = reg.installing;
+            if (!newSW) return;
+            newSW.addEventListener('statechange', function() {
+              if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+                /* 새 버전 설치됨 → 사용자에게 안내 */
+                toast('🔄 새 버전 준비 완료 — 새로고침하면 적용됩니다');
+              }
+            });
+          });
+        })
+        .catch(function(err) {
+          console.warn('[SW] 등록 실패:', err);
+        });
+
+      /* 다른 탭에서 SW가 업데이트되면 이 탭도 자동 새로고침 */
+      var refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        if (!refreshing) { refreshing = true; window.location.reload(); }
+      });
+    });
+  }
+
+  /* ── SW 메시지 헬퍼 (설정 탭 캐시 초기화 버튼용) ── */
+  window.swClearCache = function() {
+    if (!navigator.serviceWorker.controller) {
+      toast('Service Worker가 활성화되지 않았습니다');
+      return;
+    }
+    navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
+    toast('✅ 캐시를 초기화했습니다 — 새로고침 후 적용됩니다');
+  };
+
+  /* ── PWA 홈화면 설치 배너 (Android Chrome) ── */
+  var _deferredPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    _deferredPrompt = e;
+    var btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.style.display = 'flex';
+  });
+
+  window.pwaInstall = function() {
+    if (!_deferredPrompt) {
+      /* 이미 설치됐거나 iOS → 설정 탭 안내로 이동 */
+      try { goTab('settings'); } catch(ex) {}
+      return;
+    }
+    _deferredPrompt.prompt();
+    _deferredPrompt.userChoice.then(function(result) {
+      _deferredPrompt = null;
+      var btn = document.getElementById('pwaInstallBtn');
+      if (btn) btn.style.display = 'none';
+      if (result.outcome === 'accepted') {
+        toast('✅ 홈화면에 설치되었습니다');
+      }
+    });
+  };
+
+  window.addEventListener('appinstalled', function() {
+    toast('📱 홈화면에 추가되었습니다!');
+    var btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.style.display = 'none';
+  });
+
+  /* ── 온라인/오프라인 감지 ── */
+  function syncOnlineUI() {
+    var chip = document.getElementById('onlineChip');
+    if (!chip) return;
+    if (navigator.onLine) {
+      chip.textContent = '🟢 온라인';
+      chip.className   = 'chip green';
+    } else {
+      chip.textContent = '🔴 오프라인';
+      chip.className   = 'chip red';
+      toast('⚠️ 오프라인 — 로컬 데이터로 동작합니다');
+    }
+  }
+  window.addEventListener('online',  syncOnlineUI);
+  window.addEventListener('offline', syncOnlineUI);
+  document.addEventListener('DOMContentLoaded', syncOnlineUI);
+
+  /* ── standalone(설치된 앱) 모드 감지 ── */
+  var isStandalone = window.matchMedia('(display-mode: standalone)').matches
+                  || window.navigator.standalone === true;
+  if (isStandalone) {
+    document.documentElement.classList.add('pwa-standalone');
+    /* 설치된 앱 모드에서 상단 설치 버튼 항상 숨김 */
+    var btn = document.getElementById('pwaInstallBtn');
+    if (btn) btn.style.display = 'none';
+  }
+})();
 </script>
 
 </body>
