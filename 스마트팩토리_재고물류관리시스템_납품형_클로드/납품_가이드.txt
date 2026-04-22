@@ -1,0 +1,23 @@
+납품 절차 가이드
+━━━━━━━━━━━━━━━
+
+1. index.html 상단 CONFIG 블록 수정
+   CLIENT_ID   → 고객사 영문 약자 (예: osung)
+   COMPANY     → 고객사 회사명 (예: 오성정공 재고시스템)
+   LOGO_TEXT   → 로고 약자 (예: OS)
+   WAREHOUSES  → 실제 창고명으로 변경
+   USERS       → 계정 및 비밀번호 설정
+   SEED_ITEMS  → 초기 품목 데이터 (선택)
+
+2. 납품 ZIP 구성
+   ├── index.html   ← 메인 파일 (단일 파일로 동작)
+   ├── README.txt   ← 사용자 가이드
+   └── 납품_가이드.txt (이 파일은 제거)
+
+3. GAS 연동 시 별도 Code.gs 파일 제공
+   (Google Sheets 연동이 필요한 경우)
+
+4. 납품 후 고객사에서 설정 탭에서
+   - 컬러 테마 선택
+   - GAS URL 입력
+   - 기본 담당자/창고 설정
