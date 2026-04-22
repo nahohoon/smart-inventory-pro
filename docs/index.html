@@ -1643,7 +1643,7 @@ async function saveTx(){
     if(item){var whs=item[row.warehouse]!=null?item[row.warehouse]:0;if(row.qty>whs){showAlert('⚠️ 출고 수량 초과','['+row.name+'] '+row.warehouse+' 현재고: <strong>'+fmt(whs)+'</strong><br>출고 요청: <strong style="color:#dc2626">'+fmt(row.qty)+'</strong><br><br>현재고보다 많은 수량은 출고할 수 없습니다.');return;}}
   }
   var s=getSettings();
-  if(s.useGas==='Y'){
+  if(_getActiveGasUrl()){
     try{showLoad(true);await gasGet('saveTransactionGet',row);var arr=getTx();arr.push(row);setTx(arr);await syncTxSilent();}
     catch(e){showAlert('❌ GAS 저장 실패','<code>'+e.message+'</code>');showLoad(false);return;}
     finally{showLoad(false);}
@@ -2009,18 +2009,20 @@ function renderShort(){
 async function saveMaster(){
   var row={code:document.getElementById('mCode').value.trim(),name:document.getElementById('mName').value.trim(),spec:document.getElementById('mSpec').value.trim(),unit:document.getElementById('mUnit').value.trim()||'EA',safety:Number(document.getElementById('mSafety').value||0)};
   if(!row.code||!row.name){toast('품목코드와 품목명을 입력하세요');return;}
-  var idx=document.getElementById('mIdx').value,s=getSettings();
-  if(s.useGas==='Y'){try{showLoad(true);await gasGet('saveMasterItemGet',row);await syncMasterSilent();}catch(e){showAlert('❌ 품목 저장 실패','<code>'+e.message+'</code>');showLoad(false);return;}finally{showLoad(false);}}
+  var idx=document.getElementById('mIdx').value;
+  var hasGas=!!_getActiveGasUrl();
+  if(hasGas){try{showLoad(true);await gasGet('saveMasterItemGet',row);await syncMasterSilent();}catch(e){showAlert('❌ 품목 저장 실패','<code>'+e.message+'</code>');showLoad(false);return;}finally{showLoad(false);}}
   else{var arr=getMaster();if(idx==='')arr.push(row);else arr[Number(idx)]=row;setMaster(arr);}
   resetMasterForm();renderMaster();renderStock();renderShort();
-  toast(s.useGas==='Y'?'✅ 품목 저장 완료 (시트 반영)':'✅ 품목 저장 완료 (로컬)');
+  toast(hasGas?'✅ 품목 저장 완료 (시트 반영)':'✅ 품목 저장 완료 (로컬)');
 }
 function editMaster(i){var r=getMaster()[i];document.getElementById('mIdx').value=i;document.getElementById('mCode').value=r.code;document.getElementById('mName').value=r.name;document.getElementById('mSpec').value=r.spec||'';document.getElementById('mUnit').value=r.unit||'EA';document.getElementById('mSafety').value=r.safety||0;}
 async function delMaster(i){
   var arr=getMaster(),item=arr[i];if(!item)return;
-  var s=getSettings(),msg=s.useGas==='Y'?'['+item.code+'] '+item.name+'\n\n※ Google Sheets에서도 즉시 삭제됩니다.':'['+item.code+'] '+item.name+'\n\n로컬에서 삭제합니다.';
+  var hasGas=!!_getActiveGasUrl();
+  var msg=hasGas?'['+item.code+'] '+item.name+'\n\n※ Google Sheets에서도 즉시 삭제됩니다.':'['+item.code+'] '+item.name+'\n\n로컬에서 삭제합니다.';
   if(!confirm(msg))return;
-  if(s.useGas==='Y'){try{showLoad(true);await gasGet('deleteMasterItem',{code:item.code,name:item.name});arr.splice(i,1);setMaster(arr);await syncMasterSilent();}catch(e){showAlert('❌ 시트 삭제 실패','<code>'+e.message+'</code>');showLoad(false);return;}finally{showLoad(false);}}
+  if(hasGas){try{showLoad(true);await gasGet('deleteMasterItem',{code:item.code,name:item.name});arr.splice(i,1);setMaster(arr);await syncMasterSilent();}catch(e){showAlert('❌ 시트 삭제 실패','<code>'+e.message+'</code>');showLoad(false);return;}finally{showLoad(false);}}
   else{arr.splice(i,1);setMaster(arr);}
   renderMaster();renderStock();renderShort();toast('✅ 품목 삭제 완료');
 }
@@ -2140,10 +2142,19 @@ function _jsonpGAS(url, qs) {
   });
 }
 
+/* ── 현재 유효한 GAS URL 반환 (공통) ──
+   1순위: 설정 입력칸 현재 value
+   2순위: localStorage 저장값
+   3순위: CONFIG.GAS_URL 내장값                */
+function _getActiveGasUrl() {
+  var el = document.getElementById('setGasUrl');
+  if(el && el.value.trim()) return el.value.trim();
+  return getEffectiveGasUrl() || CONFIG.GAS_URL;
+}
+
 /* ── 메인 GAS 호출 함수 (fetch → JSONP 자동 폴백) ── */
 function gasGet(action, params) {
-  var s = getSettings();
-  var url = s.gasUrl || CONFIG.GAS_URL;
+  var url = _getActiveGasUrl();
   if(!url) return Promise.reject(new Error('GAS URL이 설정되지 않았습니다'));
 
   var p = Object.assign({ action: action }, params || {});
@@ -2157,19 +2168,36 @@ function gasGet(action, params) {
 
 /* ─── 동기화 ─── */
 async function testGas(){
-  var s = getSettings();
-  var url = s.gasUrl || CONFIG.GAS_URL;
+  /* ── URL 결정: 1순위 입력칸 → 2순위 localStorage → 3순위 CONFIG ── */
+  var inputEl = document.getElementById('setGasUrl');
+  var urlFromInput = inputEl ? inputEl.value.trim() : '';
+  var urlFromStorage = getEffectiveGasUrl();          /* localStorage or CONFIG */
+  var url = urlFromInput || urlFromStorage || CONFIG.GAS_URL;
+
   if(!url){
-    showAlert('URL 없음', 'Apps Script URL을 먼저 입력해 주세요.');
+    showAlert('URL 없음',
+      'Apps Script URL을 입력해 주세요.<br>' +
+      '<small style="color:#64748b">설정 → Apps Script 연동 → URL 입력란</small>');
     return;
+  }
+
+  /* 입력칸에 값이 있지만 아직 저장 안 된 경우 → 자동으로 localStorage에 저장 */
+  if(urlFromInput && urlFromInput !== urlFromStorage){
+    var stored = lsGet(KEYS.S, {});
+    stored.gasUrl  = urlFromInput;
+    stored.useGas  = 'Y';
+    lsSet(KEYS.S, stored);
+    /* 입력칸도 동일하게 유지 */
+    if(inputEl) inputEl.value = urlFromInput;
+    var useGasEl = document.getElementById('setUseGas');
+    if(useGasEl) useGasEl.value = 'Y';
   }
 
   try{
     showLoad(true);
-    document.getElementById('connState').className='chip gray';
-    document.getElementById('connState').textContent='⏳ 연결 중...';
+    var connEl = document.getElementById('connState');
+    if(connEl){ connEl.className='chip gray'; connEl.textContent='⏳ 연결 중...'; }
 
-    /* 1차: fetch 시도 */
     var data;
     try {
       data = await _fetchGAS(url, 'action=test');
@@ -2179,10 +2207,8 @@ async function testGas(){
     }
 
     if(data && data.success){
-      document.getElementById('connState').className='chip green';
-      document.getElementById('connState').textContent='✅ 연결 정상';
+      if(connEl){ connEl.className='chip green'; connEl.textContent='✅ 연결 정상'; }
       toast('✅ GAS 연결 성공: '+(data.message||'정상'));
-      /* 연결 성공 시 동기화 배너 제거 */
       var banner = document.getElementById('sync-banner');
       if(banner) banner.classList.remove('show');
       startAutoSync();
@@ -2191,14 +2217,14 @@ async function testGas(){
     }
 
   } catch(e){
-    document.getElementById('connState').className='chip red';
-    document.getElementById('connState').textContent='❌ 연결 실패';
+    var connEl2 = document.getElementById('connState');
+    if(connEl2){ connEl2.className='chip red'; connEl2.textContent='❌ 연결 실패'; }
     showAlert('❌ 연결 실패',
       e.message + '<br><br>' +
       '<small style="color:#64748b">' +
-      '• Apps Script 배포 권한: <b>모든 사용자</b><br>' +
+      '• 테스트 URL: <code style="font-size:10px;word-break:break-all">' + url + '</code><br><br>' +
+      '• 배포 권한: <b>모든 사용자 (익명 포함)</b><br>' +
       '• 배포 유형: <b>웹 앱</b><br>' +
-      '• 실행 계정: <b>나(개발자)</b> 확인<br>' +
       '• URL이 <code>/exec</code>로 끝나는지 확인' +
       '</small>'
     );
@@ -2213,16 +2239,15 @@ function updateSyncChip(){
 }
 
 async function syncMasterSilent(){
-  var s=getSettings();
-  if(s.useGas!=='Y') return;
+  /* URL이 있으면 무조건 동기화 시도 (useGas 저장값 관계없이) */
+  if(!_getActiveGasUrl()) return;
   var data = await gasGet('getMasterItems');
   if(data.success && data.items){ setMaster(data.items); }
   lsSet(KEYS.SYNC, new Date().toISOString());
 }
 
 async function syncTxSilent(){
-  var s=getSettings();
-  if(s.useGas!=='Y') return;
+  if(!_getActiveGasUrl()) return;
   var data = await gasGet('getTransactions');
   if(data.success && data.transactions){ setTx(data.transactions); }
   lsSet(KEYS.SYNC, new Date().toISOString());
@@ -2262,13 +2287,8 @@ async function syncTxNow(){
 }
 
 async function doRefreshAll(){
-  var s=getSettings();
-  if(s.useGas!=='Y'){
-    renderDash();
-    renderHist();
-    renderStock();
-    renderShort();
-    renderMaster();
+  if(!_getActiveGasUrl()){
+    renderDash();renderHist();renderStock();renderShort();renderMaster();
     toast('로컬 데이터 새로고침 완료');
     return;
   }
@@ -2295,55 +2315,36 @@ var _autoSyncTimer = null;
 var _autoSyncBusy = false;
 
 async function autoSyncAllSilent(){
-  var beforeCount = getTx().length;
-
-  var s = getSettings();
-  if(!s || s.useGas !== 'Y') return;
+  if(!_getActiveGasUrl()) return;   /* URL 없으면 동기화 안 함 */
   if(_autoSyncBusy) return;
   if(document.hidden) return;
 
+  var beforeCount = getTx().length;
   try{
     _autoSyncBusy = true;
-
     await syncMasterSilent();
     await syncTxSilent();
-
     renderDash();
     renderHist();
     renderStock();
     renderShort();
     renderMaster();
     updateSyncChip();
-
-    var afterCount = getTx().length;
-    var diff = afterCount - beforeCount;
-
+    var diff = getTx().length - beforeCount;
     if(diff > 0){
-      var tx = getTx();
-      var last = tx[tx.length - 1];
-
-      if(last){
-        if(last.type === '입고'){
-          toast('📥 신규 입고 ' + diff + '건 반영');
-        }else if(last.type === '출고'){
-          toast('📤 신규 출고 ' + diff + '건 반영');
-        }else{
-          toast('📦 신규 이력 ' + diff + '건 반영');
-        }
-      }
+      var last = getTx().slice(-1)[0];
+      if(last) toast((last.type==='입고'?'📥':'📤')+' 신규 '+last.type+' '+diff+'건 반영');
     }
-
   }catch(e){
-    console.log('autoSyncAllSilent error:', e);
+    console.log('[autoSync] error:', e.message);
   }finally{
     _autoSyncBusy = false;
   }
 }
+
 function startAutoSync(){
   stopAutoSync();
-  var s=getSettings();
-  if(!s || s.useGas!=='Y') return;
-
+  if(!_getActiveGasUrl()) return;   /* URL 없으면 타이머 시작 안 함 */
   _autoSyncTimer = setInterval(function(){
     autoSyncAllSilent();
   }, AUTO_SYNC_MS);
