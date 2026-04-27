@@ -900,7 +900,7 @@ var CONFIG = {
   SUBTITLE: '스마트공장 재고·물류관리 시스템',
   FOOTER: 'Powered by Smart Factory ERP',
   CONTACT: '',
-  GAS_URL: 'https://script.google.com/macros/s/AKfycby7stu9vatQDhfoQZMB24QyuPw5TuCHaL-U63txFjUGYa38-DHoFT--DW_45IZBzfUE/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwkvK3UdQVAm8L7B4fM-P_24hbmkGUCzgjFiNb6ne0bVmjJ37NWDOHRx_kfhWsbGnitmg/exec',
   WAREHOUSES: ['성서공장', '현풍공장'],
   USERS: [
     { id: 'admin',  pw: 'ky1234', name: '관리자',  role: 'admin'  },
@@ -938,7 +938,7 @@ function getSettings(){return lsGet(KEYS.S,{
   company:CONFIG.COMPANY, logo:CONFIG.LOGO_TEXT,
   subtitle:CONFIG.SUBTITLE, footer:CONFIG.FOOTER, contact:CONFIG.CONTACT,
   gasUrl:CONFIG.GAS_URL, defaultMgr:'',
-  defaultWh:CONFIG.WAREHOUSES[0], pageSize:'20', useGas:'N',
+  defaultWh:CONFIG.WAREHOUSES[0], pageSize:'20', useGas:'Y',
   theme:CONFIG.THEME
 });}
 function getMaster(){return lsGet(KEYS.M,[]);}
@@ -1166,7 +1166,7 @@ function applyBrand(){
   sv('setMgr',s.defaultMgr||'');
   sv('setPgSz',s.pageSize||'20');
   sv('setGasUrl',s.gasUrl||CONFIG.GAS_URL);
-  sv('setUseGas',s.useGas||'N');
+  sv('setUseGas',s.useGas||'Y');
   /* 테마 컬러 폼 */
   sv('setClrPrimary',th.primary||'#2563eb');
   sv('setClrAccent',th.accent||'#16a34a');
@@ -1205,7 +1205,7 @@ function saveSettings(){
     defaultMgr:gv('setMgr',''),
     defaultWh:gv('setWh',CONFIG.WAREHOUSES[0]),
     pageSize:gv('setPgSz','20'),
-    useGas:gv('setUseGas','N'),
+    useGas:gv('setUseGas','Y'),
     theme:th
   });
   applyBrand();toast('설정 저장 완료');try{startAutoSync();}catch(e){}
