@@ -1365,10 +1365,23 @@ function calcStock(){
 /* ══ ★ 핵심 함수: 이력에 누적 현재재고 계산 추가 ══
    txList를 시간 순 정렬 후, 품목+창고별 누적 합산.
    각 행에 runningStock(해당 창고 기준) 필드를 부여.  */
+/* ── 날짜 파싱 헬퍼: 파싱 실패 시 0(Epoch) 반환, 행 누락 없음 ── */
+function _parseDate(v){
+  if(!v) return 0;
+  var d = new Date(v);
+  if(!isNaN(d)) return d.getTime();
+  /* 구글시트 한국어 형식 "2024. 1. 15." 또는 "2024. 1. 15 오전 10:30" 변환 시도 */
+  var s = String(v)
+    .replace(/오전\s*/,'').replace(/오후\s*/g,'')
+    .replace(/\s*\./g,'-').replace(/[-\s]+$/,'').trim();
+  var d2 = new Date(s);
+  return isNaN(d2) ? 0 : d2.getTime();
+}
+
 function buildHistWithStock(txList){
   var WH=CONFIG.WAREHOUSES;
-  // 시간 오름차순으로 정렬 (누적 계산용)
-  var sorted=txList.slice().sort(function(a,b){return new Date(a.date)-new Date(b.date);});
+  /* 누적 재고 계산을 위해 오름차순(과거→최신) 정렬 — NaN 날짜는 0(Epoch)으로 처리해 행 누락 방지 */
+  var sorted=txList.slice().sort(function(a,b){ return _parseDate(a.date) - _parseDate(b.date); });
   // 품목+창고별 누적 재고 누산기
   var stockMap={};
   sorted.forEach(function(r){
@@ -1628,11 +1641,12 @@ function renderHist() {
   var rawTx = getTx();
   console.log('renderHist: getTx() count =', rawTx.length, '| filters: name='+name+' code='+code+' tp='+tp+' wh='+wh+' df='+df+' dt='+dt);
 
-  /* 누적 현재재고 포함 이력 (시간 오름차순) */
+  /* buildHistWithStock: 누적 재고 계산(내부 오름차순) 후 반환 */
   var allWithStock = buildHistWithStock(rawTx);
 
-  /* 필터 적용 (화면 표시는 내림차순) */
-  var rows = allWithStock.slice().reverse().filter(function(r) {
+  /* ★ 필터 적용 후 명시적 최신순 정렬
+     — .reverse() 대신 _parseDate 기반 sort로 NaN 날짜 행도 누락 없이 뒤쪽 배치 */
+  var rows = allWithStock.slice().filter(function(r) {
     var d = isoD(r.date);
     var nameMatch = !name || (r.name||'').toLowerCase().indexOf(name) >= 0;
     var codeMatch = !code || (r.code||'').toLowerCase().indexOf(code) >= 0;
@@ -1643,6 +1657,12 @@ function renderHist() {
     var fromMatch = !df   || d >= df;
     var toMatch   = !dt   || d <= dt;
     return nameMatch && codeMatch && typeMatch && whMatch && siteMatch && mgrMatch && fromMatch && toMatch;
+  }).sort(function(a, b){
+    var ta = _parseDate(a.date), tb = _parseDate(b.date);
+    if(ta === 0 && tb === 0) return 0;
+    if(ta === 0) return 1;  /* 파싱 실패 → 맨 뒤 */
+    if(tb === 0) return -1;
+    return tb - ta; /* 최신순(내림차순) */
   });
 
   /* 합계 계산 */
@@ -2083,6 +2103,18 @@ async function syncTxSilent(){
   }
 
   var normalized = transactions.map(normalizeTxRow);
+
+  /* ★ 최신순 정렬: GAS에서 오는 순서(오래된 것부터)를 최신순으로 뒤집어 저장
+     — NaN 날짜 행은 뒤쪽에 배치, 누락 없음 */
+  normalized.sort(function(a, b){
+    var ta = _parseDate(a.date), tb = _parseDate(b.date);
+    /* 파싱 실패(0)는 맨 뒤로 */
+    if(ta === 0 && tb === 0) return 0;
+    if(ta === 0) return 1;
+    if(tb === 0) return -1;
+    return tb - ta; /* 최신순(내림차순) */
+  });
+  console.log('sorted tx[0].date (newest):', normalized.length ? normalized[0].date : 'empty');
 
   /* ★ 수정 2: setTx 직후 저장 건수 확인 */
   setTx(normalized);
