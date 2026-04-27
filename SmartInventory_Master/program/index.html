@@ -1,13 +1,12 @@
 <!DOCTYPE html>
 <!--
 ┌──────────────────────────────────────────────────────────┐
-│  스마트공장 재고·물류관리 시스템 v11 (납품형 마스터본)   │
-│  · v10 기반 — 납품 안정화 패치                           │
-│  · 기본 저장방식 useGas:'Y' (Google Sheets)              │
-│  · 상단 GAS 연동 상태칩 항시 표시                        │
-│  · 동기화 버튼 useGas=N 시 안내 메시지                   │
-│  · 연결 테스트 성공 시 useGas:'Y' 자동 저장              │
-│  · 설정 저장 후 URL·저장방식 토스트 표시                 │
+│  스마트공장 재고·물류관리 시스템 v10 (납품형 마스터본)   │
+│  · 클로드 v8 원본 기반 — 기능 100% 유지                  │
+│  · CSS 변수 컬러 테마 (저장 즉시 전체 반영)              │
+│  · 설정탭 강화 (브랜드·색상·이미지 로고·연락처)          │
+│  · 이미지 로고 localStorage 저장                         │
+│  · 파일명 다운로드 시 회사명 자동 반영                   │
 └──────────────────────────────────────────────────────────┘
 -->
 <html lang="ko">
@@ -201,11 +200,6 @@ tr:hover td{background:#fafbfc}
 /* ── 토스트 ── */
 #toast{position:fixed;right:20px;bottom:24px;background:#1e293b;color:#f8fafc;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;transform:translateY(8px);transition:.22s;z-index:9999;pointer-events:none}
 #toast.show{opacity:1;transform:none}
-
-/* ── GAS 상태칩 ── */
-.chip.gas-ok{background:#f0fdf4;color:#15803d;border:1px solid #86efac}
-.chip.gas-local{background:#fff7ed;color:#b45309;border:1px solid #fcd34d}
-.chip.gas-connecting{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0}
 
 /* ── 모달 ── */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:8000;align-items:center;justify-content:center}
@@ -433,7 +427,6 @@ tr:hover td{background:#fafbfc}
         </div>
         <div class="tb-right">
           <span class="chip gray" id="todayTxt"></span>
-          <span id="gasStatusChip" class="chip gas-connecting" title="저장 방식 상태">⏳ 연결 확인 중</span>
           <div class="user-chip">
             <div class="user-av" id="userAv">A</div>
             <span id="userNameTxt">관리자</span>
@@ -827,7 +820,7 @@ tr:hover td{background:#fafbfc}
               <div class="card-bd" style="display:grid;gap:12px">
                 <div class="fg"><label>Apps Script URL</label><input id="setGasUrl" placeholder="https://script.google.com/macros/s/..."></div>
                 <div class="fg"><label>저장 방식</label>
-                  <select id="setUseGas"><option value="N">로컬만 사용 (오프라인)</option><option value="Y">Google Sheets 저장</option></select>
+                  <select id="setUseGas"><option value="N">로컈만 사용 (오프라인)</option><option value="Y">Google Sheets 저장</option></select>
                 </div>
                 <div class="btns">
                   <button class="btn pri" onclick="testGas()">🔌 연결 테스트</button>
@@ -907,7 +900,7 @@ var CONFIG = {
   SUBTITLE: '스마트공장 재고·물류관리 시스템',
   FOOTER: 'Powered by Smart Factory ERP',
   CONTACT: '',
-  GAS_URL: 'https://script.google.com/macros/s/AKfycby7stu9vatQDhfoQZMB24QyuPw5TuCHaL-U63txFjUGYa38-DHoFT--DW_45IZBzfUE/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwkvK3UdQVAm8L7B4fM-P_24hbmkGUCzgjFiNb6ne0bVmjJ37NWDOHRx_kfhWsbGnitmg/exec',
   WAREHOUSES: ['성서공장', '현풍공장'],
   USERS: [
     { id: 'admin',  pw: 'ky1234', name: '관리자',  role: 'admin'  },
@@ -941,13 +934,22 @@ var P = 'inv_' + CONFIG.CLIENT_ID + '_';
 var KEYS = { S: P+'settings', M: P+'master', T: P+'tx', SYNC: P+'syncTime', LOGO: P+'logoImg' };
 function lsGet(k,def){try{var v=localStorage.getItem(k);return v!==null?JSON.parse(v):def;}catch(e){return def;}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
-function getSettings(){return lsGet(KEYS.S,{
-  company:CONFIG.COMPANY, logo:CONFIG.LOGO_TEXT,
-  subtitle:CONFIG.SUBTITLE, footer:CONFIG.FOOTER, contact:CONFIG.CONTACT,
-  gasUrl:CONFIG.GAS_URL, defaultMgr:'',
-  defaultWh:CONFIG.WAREHOUSES[0], pageSize:'20', useGas:'Y',
-  theme:CONFIG.THEME
-});}
+function getSettings(){
+  var def = {
+    company:CONFIG.COMPANY, logo:CONFIG.LOGO_TEXT,
+    subtitle:CONFIG.SUBTITLE, footer:CONFIG.FOOTER, contact:CONFIG.CONTACT,
+    gasUrl:CONFIG.GAS_URL, defaultMgr:'',
+    defaultWh:CONFIG.WAREHOUSES[0], pageSize:'20', useGas:'Y',
+    theme:CONFIG.THEME
+  };
+  var s = lsGet(KEYS.S, def) || def;
+  // 운영 안정화: 항상 새 Apps Script 주소와 Google Sheets 모드 사용
+  s.gasUrl = CONFIG.GAS_URL;
+  s.useGas = 'Y';
+  if(!s.theme) s.theme = CONFIG.THEME;
+  if(!s.pageSize) s.pageSize = '20';
+  return s;
+}
 function getMaster(){return lsGet(KEYS.M,[]);}
 function setMaster(v){lsSet(KEYS.M,v);}
 function getTx(){return lsGet(KEYS.T,[]);}
@@ -964,22 +966,6 @@ function toast(msg){var el=document.getElementById('toast');if(!el)return;el.tex
 function showLoad(on){var el=document.getElementById('loadingOverlay');if(el)el.classList.toggle('show',on);}
 function showAlert(title,msg){document.getElementById('alertTitle').textContent=title;document.getElementById('alertMsg').innerHTML=msg;document.getElementById('alertModal').classList.add('open');}
 function closeAlert(){document.getElementById('alertModal').classList.remove('open');}
-
-/* ─── GAS 상태칩 업데이트 ─── */
-function updateGasStatusChip(){
-  var s=getSettings();
-  var el=document.getElementById('gasStatusChip');
-  if(!el)return;
-  if(s.useGas==='Y'){
-    el.className='chip gas-ok';
-    el.textContent='🟢 Google Sheets 연동 중';
-  }else{
-    el.className='chip gas-local';
-    el.textContent='🟡 로컬 저장 모드';
-    el.title='로컬 저장 모드: 시트에 반영되지 않음';
-  }
-}
-
 /* CSS 변수 적용 */
 function applyCssVars(th){
   var r=document.documentElement.style;
@@ -1062,7 +1048,7 @@ function kyRestoreSession() {
   try { renderShort(); } catch(e) {}
   try { renderMaster(); } catch(e) {}
   try { toast(user.name + '님 자동 로그인'); } catch(e) {}
-  try { startAutoSync(); } catch(e) {}
+  try { startAutoSync(); autoSyncAllSilent(); } catch(e) {}
 })();
 
 function doLogin(){
@@ -1095,7 +1081,7 @@ function doLogin(){
   try{renderShort();}catch(e){}
   try{renderMaster();}catch(e){}
   toast(user.name+'님 로그인 완료');
-  try{ startAutoSync(); }catch(e){}
+  try{ startAutoSync(); autoSyncAllSilent(); }catch(e){}
 }
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 document.getElementById('loginPw').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
@@ -1189,7 +1175,7 @@ function applyBrand(){
   sv('setMgr',s.defaultMgr||'');
   sv('setPgSz',s.pageSize||'20');
   sv('setGasUrl',s.gasUrl||CONFIG.GAS_URL);
-  sv('setUseGas',s.useGas||'Y');
+  sv('setUseGas',s.useGas||'N');
   /* 테마 컬러 폼 */
   sv('setClrPrimary',th.primary||'#2563eb');
   sv('setClrAccent',th.accent||'#16a34a');
@@ -1200,7 +1186,6 @@ function applyBrand(){
 
   var whOpts=CONFIG.WAREHOUSES.map(function(w){return '<option value="'+w+'">'+w+'</option>';}).join('');
   var elSetWh=document.getElementById('setWh');if(elSetWh){elSetWh.innerHTML=whOpts;elSetWh.value=s.defaultWh||CONFIG.WAREHOUSES[0];}
-  updateGasStatusChip();
 }
 function applySettingsToForm(silent){
   var s=getSettings();
@@ -1229,16 +1214,10 @@ function saveSettings(){
     defaultMgr:gv('setMgr',''),
     defaultWh:gv('setWh',CONFIG.WAREHOUSES[0]),
     pageSize:gv('setPgSz','20'),
-    useGas:gv('setUseGas','Y'),
+    useGas:gv('setUseGas','N'),
     theme:th
   });
-  applyBrand();
-  var savedUseGas=gv('setUseGas','Y');
-  var savedUrl=gv('setGasUrl',CONFIG.GAS_URL);
-  var modeLabel=savedUseGas==='Y'?'Google Sheets 저장':'로컬만 사용';
-  var urlShort=savedUrl?savedUrl.replace('https://script.google.com/macros/s/','…/s/').slice(0,40)+'…':'미설정';
-  toast('✅ 설정 저장 완료 | 저장방식: '+modeLabel+' | URL: '+urlShort);
-  try{startAutoSync();}catch(e){}
+  applyBrand();toast('설정 저장 완료');try{startAutoSync();}catch(e){}
 }
 /* \u2500\u2500\u2500 \ucf5c\ub7ec picker \ud5ec\ud37c \u2500\u2500\u2500 */
 function syncColor(colorId,txtId){var el=document.getElementById(colorId),el2=document.getElementById(txtId);if(el&&el2)el2.value=el.value;}
@@ -1934,25 +1913,14 @@ async function testGas(){
   try{
     showLoad(true);
     var url=s.gasUrl||CONFIG.GAS_URL;
-    var res=await fetch(url+'?action=test');
+    var res=await fetch(url+'?action=dashboard');
     var data=await res.json();
     if(data.success){
       document.getElementById('connState').className='chip green';
       document.getElementById('connState').textContent='✅ 연결 정상';
-      /* 연결 성공 시 useGas:'Y' 자동 저장 */
-      var cur=getSettings();
-      if(cur.useGas!=='Y'){
-        cur.useGas='Y';
-        lsSet(KEYS.S,cur);
-        var elUG=document.getElementById('setUseGas');
-        if(elUG)elUG.value='Y';
-        updateGasStatusChip();
-        toast('GAS 연결 성공 → 저장 방식이 Google Sheets로 자동 전환되었습니다.');
-      }else{
-        toast('GAS 연결 성공: '+data.message);
-      }
+      toast('GAS 연결 성공');
       startAutoSync();
-    }else throw new Error(data.message);
+    }else throw new Error(data.message||'dashboard 응답 실패');
   }catch(e){
     document.getElementById('connState').className='chip red';
     document.getElementById('connState').textContent='❌ 연결 실패';
@@ -1965,30 +1933,65 @@ function updateSyncChip(){
   document.getElementById('syncTimeChip').textContent=t?'마지막 동기화: '+new Date(t).toLocaleString('ko-KR'):'마지막 동기화: 없음';
 }
 
+function normalizeMasterItem(r){
+  return {
+    code: String(r.code || r.barcode || '').trim(),
+    name: r.name || r.itemName || '',
+    spec: r.spec || r.model || '',
+    unit: r.unit || 'EA',
+    safety: Number(r.safety || 0)
+  };
+}
+
+function normalizeTxRow(r){
+  var type = String(r.type || '').trim();
+  var inP = Number(r.inPrice || 0);
+  var outP = Number(r.outPrice || 0);
+  return {
+    date: r.date || '',
+    code: String(r.code || r.barcode || '').trim(),
+    name: r.name || r.itemName || '',
+    type: type,
+    qty: Number(r.qty || 0),
+    price: type === '입고' ? inP : outP,
+    inPrice: inP,
+    outPrice: outP,
+    currentStock: Number(r.currentStock || 0),
+    warehouse: r.warehouse || r.wh || '',
+    wh: r.warehouse || r.wh || '',
+    site: r.site || r.siteName || '',
+    siteName: r.site || r.siteName || '',
+    manager: r.manager || ''
+  };
+}
+
 async function syncMasterSilent(){
   var s=getSettings();
   if(s.useGas!=='Y') return;
-  var res=await fetch((s.gasUrl||CONFIG.GAS_URL)+'?action=getMasterItems');
+  var res=await fetch((s.gasUrl||CONFIG.GAS_URL)+'?action=items');
   var data=await res.json();
-  if(data.success&&data.items){ setMaster(data.items); }
+  var rows = data.items || data.data || [];
+  if(data.success && Array.isArray(rows)){
+    setMaster(rows.map(normalizeMasterItem).filter(function(r){return r.code;}));
+  }
   lsSet(KEYS.SYNC,new Date().toISOString());
 }
 
 async function syncTxSilent(){
   var s=getSettings();
   if(s.useGas!=='Y') return;
-  var res=await fetch((s.gasUrl||CONFIG.GAS_URL)+'?action=getTransactions');
+  var res=await fetch((s.gasUrl||CONFIG.GAS_URL)+'?action=transactions');
   var data=await res.json();
-  if(data.success&&data.transactions){ setTx(data.transactions); }
+  var rows = data.transactions || data.data || [];
+  if(data.success && Array.isArray(rows)){
+    // API가 최신순으로 내려오므로 화면 내부 계산용으로 시간 오름차순 저장
+    var normalized = rows.map(normalizeTxRow).filter(function(r){return r.code;}).reverse();
+    setTx(normalized);
+  }
   lsSet(KEYS.SYNC,new Date().toISOString());
 }
 
 async function syncMasterNow(){
-  var s=getSettings();
-  if(s.useGas!=='Y'){
-    showAlert('⚠️ 저장 방식 확인 필요','현재 저장 방식이 <b>로컬만 사용</b>입니다.<br>설정에서 <b>Google Sheets 저장</b>으로 변경 후 저장 버튼을 눌러 주세요.');
-    return;
-  }
   try{
     showLoad(true);
     await syncMasterSilent();
@@ -2005,11 +2008,6 @@ async function syncMasterNow(){
 }
 
 async function syncTxNow(){
-  var s=getSettings();
-  if(s.useGas!=='Y'){
-    showAlert('⚠️ 저장 방식 확인 필요','현재 저장 방식이 <b>로컬만 사용</b>입니다.<br>설정에서 <b>Google Sheets 저장</b>으로 변경 후 저장 버튼을 눌러 주세요.');
-    return;
-  }
   try{
     showLoad(true);
     await syncTxSilent();
@@ -2029,8 +2027,12 @@ async function syncTxNow(){
 async function doRefreshAll(){
   var s=getSettings();
   if(s.useGas!=='Y'){
-    showAlert('⚠️ 저장 방식 확인 필요','현재 저장 방식이 <b>로컬만 사용</b>입니다.<br>설정에서 <b>Google Sheets 저장</b>으로 변경 후 저장 버튼을 눌러 주세요.');
-    renderDash();renderHist();renderStock();renderShort();renderMaster();
+    renderDash();
+    renderHist();
+    renderStock();
+    renderShort();
+    renderMaster();
+    toast('로컬 데이터 새로고침 완료');
     return;
   }
   try{
