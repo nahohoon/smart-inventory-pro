@@ -1624,8 +1624,12 @@ function renderHist() {
   var df   = document.getElementById('hFrom').value;
   var dt   = document.getElementById('hTo').value;
 
+  /* ★ 수정 5: getTx() 원본 건수 디버그 로그 */
+  var rawTx = getTx();
+  console.log('renderHist: getTx() count =', rawTx.length, '| filters: name='+name+' code='+code+' tp='+tp+' wh='+wh+' df='+df+' dt='+dt);
+
   /* 누적 현재재고 포함 이력 (시간 오름차순) */
-  var allWithStock = buildHistWithStock(getTx());
+  var allWithStock = buildHistWithStock(rawTx);
 
   /* 필터 적용 (화면 표시는 내림차순) */
   var rows = allWithStock.slice().reverse().filter(function(r) {
@@ -1718,16 +1722,20 @@ function renderHist() {
   window._lastHistRows = rows;
 }
 
-function resetHist() {
+/* ★ 수정 5: 필터만 초기화 (renderHist 호출 없음 — 호출자가 제어) */
+function resetHistFilters() {
   ['hName','hCode','hFrom','hTo','hSite','hMgr'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
-  document.getElementById('hType').value = '';
-  document.getElementById('hWh').value   = '';
+  var hTypeEl = document.getElementById('hType'); if(hTypeEl) hTypeEl.value = '';
+  var hWhEl   = document.getElementById('hWh');   if(hWhEl)   hWhEl.value   = '';
   clearQuickBtn();
-  document.getElementById('filterTags').innerHTML = '';
-  document.getElementById('resultBar').style.display = 'none';
+  var ftEl = document.getElementById('filterTags'); if(ftEl) ftEl.innerHTML = '';
+  var rbEl = document.getElementById('resultBar');  if(rbEl) rbEl.style.display = 'none';
   _hPage = 1;
+}
+function resetHist() {
+  resetHistFilters();
   renderHist();
 }
 
@@ -1995,24 +2003,34 @@ function normalizeMasterItem(r){
 }
 
 function normalizeTxRow(r){
+  /* ★ 수정 7: GAS 응답 필드명 완전 대응 (barcode/code, itemName/name,
+     quantity/qty, wh/warehouse, siteName/site, inPrice/outPrice/currentStock/stock) */
   var type = String(r.type || '').trim();
-  var inP = Number(r.inPrice || 0);
-  var outP = Number(r.outPrice || 0);
+  var inP  = Number(r.inPrice  || r.in_price  || 0);
+  var outP = Number(r.outPrice || r.out_price || 0);
+  /* qty: qty 또는 quantity 모두 허용 */
+  var qty  = Number(r.qty || r.quantity || 0);
+  /* warehouse: warehouse → wh → '' */
+  var wh   = String(r.warehouse || r.wh || '').trim();
+  /* site: site → siteName → '' */
+  var site = String(r.site || r.siteName || r.site_name || '').trim();
+  /* currentStock: currentStock → stock → 0 */
+  var curStock = Number(r.currentStock || r.current_stock || r.stock || 0);
   return {
-    date: r.date || '',
-    code: String(r.code || r.barcode || '').trim(),
-    name: r.name || r.itemName || '',
-    type: type,
-    qty: Number(r.qty || 0),
-    price: type === '입고' ? inP : outP,
-    inPrice: inP,
-    outPrice: outP,
-    currentStock: Number(r.currentStock || 0),
-    warehouse: r.warehouse || r.wh || '',
-    wh: r.warehouse || r.wh || '',
-    site: r.site || r.siteName || '',
-    siteName: r.site || r.siteName || '',
-    manager: r.manager || ''
+    date:         r.date || '',
+    code:         String(r.code || r.barcode || '').trim(),
+    name:         r.name || r.itemName || r.item_name || '',
+    type:         type,
+    qty:          qty,
+    price:        type === '입고' ? inP : outP,
+    inPrice:      inP,
+    outPrice:     outP,
+    currentStock: curStock,
+    warehouse:    wh,
+    wh:           wh,
+    site:         site,
+    siteName:     site,
+    manager:      r.manager || ''
   };
 }
 
@@ -2023,14 +2041,22 @@ async function syncMasterSilent(){
   var res=await fetch(getGasUrl()+'?action=getMasterItems');
   var data=await res.json();
 
+  console.log('getMasterItems raw response:', data);
+
   var items = data.items || data.data || data.masterItems || [];
+
+  console.log('master items count:', items.length);
 
   if(!Array.isArray(items)){
     throw new Error('품목 데이터 형식 오류');
   }
+  if(items.length === 0){
+    throw new Error('GAS 응답은 성공했지만 품목 데이터가 0건입니다. 구글시트를 확인해주세요.');
+  }
 
   var normalized = items.map(normalizeMasterItem);
   setMaster(normalized);
+  console.log('saved master count:', getMaster().length);
 
   lsSet(KEYS.SYNC,new Date().toISOString());
 }
@@ -2042,14 +2068,25 @@ async function syncTxSilent(){
   var res=await fetch(getGasUrl()+'?action=getTransactions');
   var data=await res.json();
 
+  /* ★ 수정 1: 디버그 로그 + 건수 검증 */
+  console.log('getTransactions raw response:', data);
+
   var transactions = data.transactions || data.data || data.rows || [];
+
+  console.log('transactions count:', transactions.length);
 
   if(!Array.isArray(transactions)){
     throw new Error('이력 데이터 형식 오류');
   }
+  if(transactions.length === 0){
+    throw new Error('GAS 응답은 성공했지만 이력 데이터가 0건입니다. 구글시트를 확인해주세요.');
+  }
 
   var normalized = transactions.map(normalizeTxRow);
+
+  /* ★ 수정 2: setTx 직후 저장 건수 확인 */
   setTx(normalized);
+  console.log('saved tx count:', getTx().length);
 
   lsSet(KEYS.SYNC,new Date().toISOString());
 }
@@ -2064,7 +2101,13 @@ async function syncMasterNow(){
     renderStock();
     renderShort();
     updateSyncChip();
-    toast('✅ 품목 동기화 완료');
+    /* ★ 수정 4: 실제 품목 건수 표시 */
+    var cnt = getMaster().length;
+    if(cnt === 0){
+      showAlert('⚠️ 품목 동기화 경고', '동기화는 완료됐지만 저장된 품목이 0건입니다.<br>구글시트 품목 데이터를 확인해주세요.');
+    } else {
+      toast('✅ 품목 동기화 완료: ' + cnt + '건');
+    }
   }catch(e){
     showAlert('동기화 실패',e.message);
   }finally{
@@ -2078,12 +2121,20 @@ async function syncTxNow(){
   try{
     showLoad(true);
     await syncTxSilent();
+    /* ★ 수정 5: 이력 화면은 전체 조건으로 초기화 후 렌더 */
+    resetHistFilters();
     renderDash();
     renderHist();
     renderStock();
     renderShort();
     updateSyncChip();
-    toast('✅ 이력 동기화 완료');
+    /* ★ 수정 3: 실제 저장 건수 표시 / 0건이면 오류 */
+    var cnt = getTx().length;
+    if(cnt === 0){
+      showAlert('⚠️ 이력 동기화 경고', '동기화는 완료됐지만 저장된 이력이 0건입니다.<br>구글시트 이력 데이터를 확인해주세요.');
+    } else {
+      toast('✅ 이력 동기화 완료: ' + cnt + '건');
+    }
   }catch(e){
     showAlert('동기화 실패',e.message);
   }finally{
