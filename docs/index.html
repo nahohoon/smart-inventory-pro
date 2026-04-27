@@ -970,7 +970,7 @@ function setTx(v){lsSet(KEYS.T,v);}
 /* ─── 유틸 ─── */
 function fmt(n){return Number(n||0).toLocaleString('ko-KR');}
 function fmtPrice(n){if(!n&&n!==0)return '';var v=Number(n);if(isNaN(v)||v===0)return '';return v.toLocaleString('ko-KR')+'원';}
-function isoD(v){return String(v||'').slice(0,10);}
+/* isoD: 아래 _parseDate 기반 버전으로 대체됨 (1384번 줄) */
 function nowISO(){var d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16);}
 function coName(){return (getSettings().company||CONFIG.COMPANY).replace(/[\\/:*?"<>|]/g,'');}
 var _toastTimer;
@@ -1378,6 +1378,25 @@ function _parseDate(v){
   return isNaN(d2) ? 0 : d2.getTime();
 }
 
+/* ── isoD: 날짜문자열을 YYYY-MM-DD 형식으로 정규화
+   ★ 핑스: 구글시트 한국어 형식("2025. 4. 27.") 등도안전하게 정규화해서
+   날짜 필터(d >= df 마지막에서) 작동하도록 수정 ── */
+function isoD(v){
+  if(!v) return '';
+  /* 이미 YYYY-MM-DD 또는 YYYY-MM-DD... 형식이면 또는 ISO이면 앞 10자리 바로 자르기 */
+  var s = String(v);
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  /* 그 외 형식은 _parseDate로 파싱 후 toISOString */
+  var t = _parseDate(v);
+  if(!t) return '';
+  var d = new Date(t);
+  /* UTC가 아닌 로컈 날짜로 슬라이싱 */
+  var y  = d.getFullYear();
+  var mo = String(d.getMonth()+1).padStart(2,'0');
+  var dy = String(d.getDate()).padStart(2,'0');
+  return y+'-'+mo+'-'+dy;
+}
+
 function buildHistWithStock(txList){
   var WH=CONFIG.WAREHOUSES;
   /* 누적 재고 계산을 위해 오름차순(과거→최신) 정렬 — NaN 날짜는 0(Epoch)으로 처리해 행 누락 방지 */
@@ -1637,15 +1656,22 @@ function renderHist() {
   var df   = document.getElementById('hFrom').value;
   var dt   = document.getElementById('hTo').value;
 
-  /* ★ 수정 5: getTx() 원본 건수 디버그 로그 */
+  /* ── 수정 3: getTx() 전체 건수 + 첫/마지막 행 로그 ── */
   var rawTx = getTx();
-  console.log('renderHist: getTx() count =', rawTx.length, '| filters: name='+name+' code='+code+' tp='+tp+' wh='+wh+' df='+df+' dt='+dt);
+  console.log('[renderHist] getTx count:', rawTx.length);
+  console.log('[renderHist] getTx first:', rawTx[0]);
+  console.log('[renderHist] getTx last :', rawTx[rawTx.length - 1]);
+  console.log('[renderHist] filters — name:'+name+' code:'+code+' tp:'+tp+' wh:'+wh+' df:'+df+' dt:'+dt);
 
-  /* buildHistWithStock: 누적 재고 계산(내부 오름차순) 후 반환 */
+  /* ── 수정 7: buildHistWithStock 건수 검증 ── */
   var allWithStock = buildHistWithStock(rawTx);
+  if(allWithStock.length !== rawTx.length){
+    console.warn('[renderHist] ⚠️ buildHistWithStock 누락! getTx='+rawTx.length+' → allWithStock='+allWithStock.length);
+  } else {
+    console.log('[renderHist] buildHistWithStock count OK:', allWithStock.length);
+  }
 
-  /* ★ 필터 적용 후 명시적 최신순 정렬
-     — .reverse() 대신 _parseDate 기반 sort로 NaN 날짜 행도 누락 없이 뒤쪽 배치 */
+  /* 필터 적용 후 명시적 최신순 정렬 — NaN 날짜 행은 맨 뒤, 누락 없음 */
   var rows = allWithStock.slice().filter(function(r) {
     var d = isoD(r.date);
     var nameMatch = !name || (r.name||'').toLowerCase().indexOf(name) >= 0;
@@ -1660,10 +1686,15 @@ function renderHist() {
   }).sort(function(a, b){
     var ta = _parseDate(a.date), tb = _parseDate(b.date);
     if(ta === 0 && tb === 0) return 0;
-    if(ta === 0) return 1;  /* 파싱 실패 → 맨 뒤 */
+    if(ta === 0) return 1;   /* 파싱 실패 → 맨 뒤 */
     if(tb === 0) return -1;
-    return tb - ta; /* 최신순(내림차순) */
+    return tb - ta;           /* 최신순(내림차순) */
   });
+
+  /* ── 수정 4: 필터 후 rows 건수 + 첫/마지막 행 로그 ── */
+  console.log('[renderHist] rows after filter+sort count:', rows.length);
+  console.log('[renderHist] rows first (should be newest):', rows[0]);
+  console.log('[renderHist] rows last  (should be oldest):', rows[rows.length - 1]);
 
   /* 합계 계산 */
   var inSum   = 0, outSum  = 0, inAmt  = 0, outAmt = 0;
@@ -2102,23 +2133,29 @@ async function syncTxSilent(){
     throw new Error('GAS 응답은 성공했지만 이력 데이터가 0건입니다. 구글시트를 확인해주세요.');
   }
 
+  /* ── 수정 1: normalized 생성 직후 첫/마지막 행 로그 ── */
   var normalized = transactions.map(normalizeTxRow);
+  console.log('[sync] normalized count:', normalized.length);
+  console.log('[sync] normalized first (oldest raw):', normalized[0]);
+  console.log('[sync] normalized last  (newest raw):', normalized[normalized.length - 1]);
 
-  /* ★ 최신순 정렬: GAS에서 오는 순서(오래된 것부터)를 최신순으로 뒤집어 저장
-     — NaN 날짜 행은 뒤쪽에 배치, 누락 없음 */
+  /* 최신순 정렬 — NaN 날짜 행은 맨 뒤, 누락 없음 */
   normalized.sort(function(a, b){
     var ta = _parseDate(a.date), tb = _parseDate(b.date);
-    /* 파싱 실패(0)는 맨 뒤로 */
     if(ta === 0 && tb === 0) return 0;
-    if(ta === 0) return 1;
+    if(ta === 0) return 1;   /* 파싱 실패 → 맨 뒤 */
     if(tb === 0) return -1;
-    return tb - ta; /* 최신순(내림차순) */
+    return tb - ta;          /* 최신순(내림차순) */
   });
-  console.log('sorted tx[0].date (newest):', normalized.length ? normalized[0].date : 'empty');
+  console.log('[sync] after sort — first (newest):', normalized[0]);
+  console.log('[sync] after sort — last  (oldest):', normalized[normalized.length - 1]);
 
-  /* ★ 수정 2: setTx 직후 저장 건수 확인 */
+  /* ── 수정 2: setTx 직후 getTx() 첫/마지막 행 로그 ── */
   setTx(normalized);
-  console.log('saved tx count:', getTx().length);
+  var saved = getTx();
+  console.log('[sync] saved count:', saved.length);
+  console.log('[sync] saved first:', saved[0]);
+  console.log('[sync] saved last :', saved[saved.length - 1]);
 
   lsSet(KEYS.SYNC,new Date().toISOString());
 }
