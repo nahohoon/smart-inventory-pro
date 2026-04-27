@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <!--
 ┌──────────────────────────────────────────────────────────┐
 │  스마트공장 재고·물류관리 시스템 v10 (납품형 마스터본)   │
@@ -453,7 +453,14 @@ tr:hover td{background:#fafbfc}
   /* ── 설정화면 ── */
   .set-sec-title{font-size:10px;margin-bottom:8px}
   .set-info{font-size:11.5px;line-height:1.9}
-  .color-row{grid-template-columns:1fr 1fr!important;gap:8px}
+  /* 설정화면 컬러 행: 모바일에서 완전 1열 full-width */
+  .color-row{grid-template-columns:1fr!important;gap:10px}
+  .cf{width:100%}
+  .cf .ci{display:flex;align-items:center;gap:8px;width:100%}
+  .cf .ci input[type=text]{flex:1;min-width:0;font-size:14px;padding:10px 12px}
+  .cf .ci input[type=color]{width:44px;height:44px;padding:2px 3px;flex-shrink:0}
+  /* 설정 탭 전체: 탭바에 가리지 않도록 하단 여백 90px */
+  #tab-settings{padding-bottom:90px}
   /* GAS URL 입력줄 세로 정렬 */
   #setGasUrl{width:100%!important;font-size:13px}
   .card-bd [style*="display:flex"][style*="gap:8px"]{
