@@ -1,144 +1,108 @@
 <!DOCTYPE html>
 <!--
 ┌──────────────────────────────────────────────────────────┐
-│  스마트공장 재고·물류관리 시스템 v9 (납품형)              │
-│  · CONFIG 블록만 수정하면 고객사 커스터마이징 완료        │
-│  · 컬러 테마 관리자 설정에서 실시간 변경                  │
-│  · 다운로드 파일명 자동으로 회사명 반영                   │
-│  · 프리미엄 UI/UX (로그인·사이드바·카드 개선)            │
-│  · 기존 기능(GAS연동·자동동기화·바코드) 전부 유지         │
+│  스마트공장 재고·물류관리 시스템 v11 (납품형 마스터본)   │
+│  · v10 기반 — 납품 안정화 패치                           │
+│  · 기본 저장방식 useGas:'Y' (Google Sheets)              │
+│  · 상단 GAS 연동 상태칩 항시 표시                        │
+│  · 동기화 버튼 useGas=N 시 안내 메시지                   │
+│  · 연결 테스트 성공 시 useGas:'Y' 자동 저장              │
+│  · 설정 저장 후 URL·저장방식 토스트 표시                 │
 └──────────────────────────────────────────────────────────┘
 -->
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>KY 재고관리</title>
-
-<!-- ══ PWA 핵심 ══ -->
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1e3a8a">
-
-<!-- ══ iOS Safari PWA ══ -->
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="KY 재고관리">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png">
-<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
-<!-- iOS 스플래시 (iPhone 15 Pro 기준) -->
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
-<!-- ══ Android / 일반 ══ -->
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon.png">
-<link rel="icon" type="image/x-icon" href="favicon.ico">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="application-name" content="KY 재고관리">
-
-<!-- ══ SEO / OG ══ -->
-<meta name="description" content="스마트공장 재고·물류관리 시스템">
-<meta name="robots" content="noindex,nofollow">
-
-<!-- ══ safe-area 대응 (노치/홈바) ══ -->
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>재고관리 시스템</title>
 <style>
-  :root{
-    --safe-top:    env(safe-area-inset-top,    0px);
-    --safe-bottom: env(safe-area-inset-bottom, 0px);
-    --safe-left:   env(safe-area-inset-left,   0px);
-    --safe-right:  env(safe-area-inset-right,  0px);
-  }
-  /* 설치된 앱 모드에서 상태바 공간 확보 */
-  @media all and (display-mode: standalone) {
-    #loginScreen { padding-top: var(--safe-top) }
-    .topbar      { padding-top: calc(var(--safe-top) / 2) }
-    #mobileNav   { padding-bottom: var(--safe-bottom) }
-    .content     { padding-bottom: calc(80px + var(--safe-bottom)) }
-  }
-</style>
-<style>
-/* ══ CSS 변수 기반 테마 시스템 ══ */
+/* ── CSS 변수 (applyBrand()에서 동적 갱신) ── */
 :root{
-  --c1:#1e3a8a;   /* 사이드바 다크 */
-  --c2:#2563eb;   /* 메인 액센트 */
-  --c3:#3b82f6;   /* 버튼 호버 */
-  --c4:#eff6ff;   /* 연한 배경 */
-  --c5:#dbeafe;   /* 연한 보더 */
-  --sidebar-from:#0f2747;
-  --sidebar-to:#1a3a6b;
+  --cp:#2563eb;--cp-d:#1d4ed8;--cp-l:#eff6ff;
+  --ca:#16a34a;--cam:#d97706;--cd:#dc2626;
+  --cs-t:#0f2747;--cs-b:#1a3a6b;
+  --cl-t:#0a1628;--cl-b:#1a3a6b;
 }
-
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;background:#f0f4f8;color:#1e293b}
 
-/* ── 로그인 (프리미엄) ── */
-#loginScreen{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,var(--sidebar-from),var(--sidebar-to));display:flex;align-items:center;justify-content:center}
-#loginScreen::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(255,255,255,.04) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(255,255,255,.06) 0%,transparent 50%);pointer-events:none}
-.login-box{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.15);border-radius:24px;padding:48px 42px;width:380px;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.1);position:relative;backdrop-filter:blur(12px)}
-.login-logo{width:72px;height:72px;background:linear-gradient(135deg,#fff,#c7d7ff);color:var(--sidebar-from);border-radius:20px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:24px;margin:0 auto 16px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+/* ── 로그인 ── */
+#loginScreen{position:fixed;inset:0;z-index:9999;background:linear-gradient(145deg,var(--cl-t),var(--cl-b));display:flex;align-items:center;justify-content:center}
+.login-wrap{width:400px;padding:20px}
+.login-box{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:24px;padding:48px 40px 40px;text-align:center;box-shadow:0 32px 80px rgba(0,0,0,.45),0 0 0 1px rgba(255,255,255,.05);backdrop-filter:blur(10px)}
+.login-logo{width:72px;height:72px;background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(199,215,255,.9));color:var(--cl-t);border-radius:20px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:24px;margin:0 auto 18px;box-shadow:0 8px 24px rgba(0,0,0,.25);overflow:hidden;flex-shrink:0}
+.login-logo img{width:100%;height:100%;object-fit:cover;border-radius:18px}
 .login-box h2{color:#f1f5f9;font-size:22px;font-weight:800;margin-bottom:4px;letter-spacing:-.02em}
 .login-sub{color:rgba(255,255,255,.45);font-size:13px;margin-bottom:32px}
+.login-footer{color:rgba(255,255,255,.2);font-size:11px;margin-top:16px;text-align:center}
 .lf{margin-bottom:14px;text-align:left}
-.lf label{color:rgba(255,255,255,.55);font-size:11.5px;font-weight:700;display:block;margin-bottom:6px;letter-spacing:.04em}
-.lf input{width:100%;padding:13px 15px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);border-radius:12px;color:#f1f5f9;font-size:14px;outline:none;font-family:inherit;transition:all .2s}
-.lf input:focus{border-color:rgba(255,255,255,.4);background:rgba(255,255,255,.13);box-shadow:0 0 0 3px rgba(255,255,255,.06)}
-.lf input::placeholder{color:rgba(255,255,255,.25)}
-#loginBtn{width:100%;padding:14px;background:linear-gradient(135deg,var(--c2),var(--c1));color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-top:8px;font-family:inherit;letter-spacing:.02em;box-shadow:0 4px 16px rgba(37,99,235,.4);transition:all .2s}
-#loginBtn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(37,99,235,.5)}
+.lf label{color:rgba(255,255,255,.55);font-size:11.5px;font-weight:700;display:block;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase}
+.lf input{width:100%;padding:13px 16px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);border-radius:12px;color:#f1f5f9;font-size:14px;outline:none;font-family:inherit;transition:border .15s,background .15s}
+.lf input:focus{border-color:rgba(255,255,255,.45);background:rgba(255,255,255,.14)}
+.lf input::placeholder{color:rgba(255,255,255,.28)}
+#loginBtn{width:100%;padding:14px;background:linear-gradient(135deg,var(--cp),var(--cp-d));color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-top:8px;font-family:inherit;box-shadow:0 4px 16px rgba(37,99,235,.35);transition:opacity .15s,transform .1s}
+#loginBtn:hover{opacity:.92;transform:translateY(-1px)}
 #loginBtn:active{transform:translateY(0)}
-#loginErr{color:#fca5a5;font-size:13px;margin-top:10px;display:none;font-weight:600}
-.login-footer{color:rgba(255,255,255,.2);font-size:11px;margin-top:24px}
+#loginErr{color:#fca5a5;font-size:13px;margin-top:12px;display:none;font-weight:600}
 
 /* ── 앱 레이아웃 ── */
 #appWrap{display:none;height:100vh;overflow:hidden}
 .layout{display:flex;height:100%}
 
-/* ── 사이드바 (프리미엄) ── */
-.side{width:248px;background:linear-gradient(180deg,var(--sidebar-from),var(--sidebar-to));color:#fff;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;box-shadow:4px 0 24px rgba(0,0,0,.15)}
-.side-brand{padding:22px 18px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
-.brand-logo{width:42px;height:42px;background:linear-gradient(135deg,#fff,#c7d7ff);color:var(--sidebar-from);border-radius:13px;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;vertical-align:middle;margin-right:11px;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+/* ── 사이드바 ── */
+.side{width:244px;background:linear-gradient(180deg,var(--cs-t),var(--cs-b));color:#fff;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.side::-webkit-scrollbar{width:0}
+.side-brand{padding:22px 16px 16px;border-bottom:1px solid rgba(255,255,255,.09)}
+.brand-logo{width:38px;height:38px;background:linear-gradient(135deg,rgba(255,255,255,.95),rgba(199,215,255,.85));color:var(--cs-t);border-radius:11px;display:inline-flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;vertical-align:middle;margin-right:10px;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.2);overflow:hidden}
+.brand-logo img{width:100%;height:100%;object-fit:cover;border-radius:9px}
 .brand-name{font-size:15px;font-weight:800;vertical-align:middle;letter-spacing:-.01em}
-.brand-sub{font-size:11px;color:rgba(255,255,255,.35);margin-top:5px;padding-left:2px}
-.nav-sec{padding:16px 12px 5px;font-size:10px;color:rgba(255,255,255,.28);font-weight:800;letter-spacing:.08em}
-.nav-btn{display:flex;align-items:center;gap:10px;width:100%;padding:11px 14px;margin:1px 6px;width:calc(100% - 12px);background:none;border:none;color:rgba(255,255,255,.7);font-size:13px;font-weight:600;cursor:pointer;border-radius:10px;text-align:left;font-family:inherit;transition:all .15s}
+.brand-sub{font-size:11px;color:rgba(255,255,255,.38);margin-top:5px;padding-left:2px}
+.nav-sec{padding:16px 14px 5px;font-size:10px;color:rgba(255,255,255,.32);font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.nav-btn{display:flex;align-items:center;gap:10px;width:calc(100% - 16px);margin:1px 8px;padding:10px 14px;background:none;border:none;color:rgba(255,255,255,.72);font-size:13px;font-weight:600;cursor:pointer;border-radius:10px;text-align:left;font-family:inherit;transition:background .12s,color .12s}
 .nav-btn:hover{background:rgba(255,255,255,.1);color:#fff}
-.nav-btn.on{background:linear-gradient(135deg,rgba(255,255,255,.18),rgba(255,255,255,.08));color:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
-.nav-btn .ico{font-size:16px;width:20px;text-align:center;flex-shrink:0}
-.badge{background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;margin-left:auto;display:none;box-shadow:0 2px 6px rgba(239,68,68,.4)}
+.nav-btn.on{background:rgba(255,255,255,.14);color:#fff;font-weight:700}
+.nav-btn .ico{font-size:15px;width:20px;text-align:center;flex-shrink:0;opacity:.85}
+.nav-btn.on .ico{opacity:1}
+.badge{background:var(--cd);color:#fff;font-size:10px;font-weight:800;padding:2px 7px;border-radius:99px;margin-left:auto;display:none}
 .badge.show{display:inline-block}
+.side-bottom{margin-top:auto;padding:10px 12px 14px;border-top:1px solid rgba(255,255,255,.07)}
+.logout-btn{width:100%;padding:9px 14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:10px;color:rgba(255,255,255,.55);font-size:12px;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:8px;font-family:inherit;font-weight:600}
+.logout-btn:hover{background:rgba(239,68,68,.18);color:#fca5a5;border-color:rgba(239,68,68,.2)}
 
 /* ── 메인 ── */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.topbar{background:#fff;border-bottom:1px solid #e8edf5;padding:0 28px;height:66px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 2px 12px rgba(30,58,138,.06)}
+.topbar{background:#fff;border-bottom:1px solid #e2e8f0;padding:0 26px;height:64px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;box-shadow:0 1px 4px rgba(0,0,0,.05)}
 .tb-left h2{font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-.02em}
 .tb-left .tb-sub{font-size:12px;color:#64748b;margin-top:2px}
-.tb-right{display:flex;align-items:center;gap:12px}
-.chip{padding:5px 13px;border-radius:99px;font-size:12px;font-weight:700}
-.chip.blue{background:var(--c4);color:var(--c2)}.chip.green{background:#f0fdf4;color:#15803d}
+.tb-right{display:flex;align-items:center;gap:10px}
+.chip{padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700}
+.chip.blue{background:var(--cp-l);color:var(--cp)}.chip.green{background:#f0fdf4;color:#15803d}
 .chip.red{background:#fff1f2;color:#be123c}.chip.gray{background:#f1f5f9;color:#475569}.chip.amber{background:#fffbeb;color:#92400e}
-.content{flex:1;overflow-y:auto;padding:22px 30px}
+.user-chip{display:flex;align-items:center;gap:7px;padding:5px 12px 5px 8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:99px;font-size:12px;font-weight:700;color:#334155}
+.user-av{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--cp),var(--cp-d));color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.content{flex:1;overflow-y:auto;padding:22px 28px}
 
 /* ── 탭 ── */
 .tab{display:none}.tab.on{display:block}
 
 /* ── KPI ── */
-.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:22px}
-.kpi-card{background:#fff;border:1px solid #e8edf5;border-radius:16px;padding:18px 20px;position:relative;overflow:hidden;box-shadow:0 2px 12px rgba(30,58,138,.06);transition:box-shadow .2s}
-.kpi-card:hover{box-shadow:0 6px 24px rgba(30,58,138,.1)}
-.kpi-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,var(--c2));border-radius:4px 0 0 4px}
-.kpi-card.green{--c:#16a34a}.kpi-card.red{--c:#dc2626}.kpi-card.amber{--c:#d97706}.kpi-card.navy{--c:var(--c1)}
-.kpi-ico{font-size:22px;margin-bottom:8px}
-.kpi-lbl{font-size:11px;color:#64748b;font-weight:700;letter-spacing:.03em}
-.kpi-val{font-size:32px;font-weight:900;line-height:1.1;margin:6px 0 4px;letter-spacing:-.02em}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:20px}
+.kpi-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px 18px;position:relative;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.05);transition:box-shadow .15s,transform .15s}
+.kpi-card:hover{box-shadow:0 4px 18px rgba(0,0,0,.09);transform:translateY(-1px)}
+.kpi-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,var(--cp));border-radius:4px 0 0 4px}
+.kpi-card.green{--c:var(--ca)}.kpi-card.red{--c:var(--cd)}.kpi-card.amber{--c:var(--cam)}.kpi-card.navy{--c:#1e3a8a}
+.kpi-ico{font-size:20px;margin-bottom:6px}
+.kpi-lbl{font-size:11px;color:#64748b;font-weight:700}
+.kpi-val{font-size:30px;font-weight:800;line-height:1.1;margin:6px 0 4px}
 .kpi-meta{font-size:11px;color:#94a3b8}
 
-/* ── 카드 ── */
-.card{background:#fff;border:1px solid #e8edf5;border-radius:18px;box-shadow:0 2px 16px rgba(30,58,138,.07);margin-bottom:16px;overflow:hidden;transition:box-shadow .2s}
-.card:hover{box-shadow:0 4px 24px rgba(30,58,138,.1)}
-.card-hd{padding:16px 22px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;background:#fff}
+/* ── 카드 / 테이블 ── */
+.card{background:#fff;border:1px solid #e8edf5;border-radius:18px;box-shadow:0 2px 12px rgba(30,58,95,.06);margin-bottom:16px;overflow:hidden}
+.card-hd{padding:15px 22px;border-bottom:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center;background:#fff}
 .card-hd h3{font-size:15px;font-weight:800;color:#0f172a;letter-spacing:-.01em}
-.card-hd-hist{background:linear-gradient(135deg,#f8faff,var(--c4));border-bottom:2px solid var(--c5)}
-.card-hd-hist h3{color:var(--c1)}
-.card-bd{padding:18px 22px}
+.card-hd-hist{background:linear-gradient(135deg,#f8faff,#eff4ff);border-bottom:2px solid #dde8fb}
+.card-hd-hist h3{color:#1e3a5f}
+.card-bd{padding:16px 20px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 
@@ -196,16 +160,17 @@ tr:hover td{background:#fafbfc}
 .frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px}
 .frow4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px}
 .fg label{display:block;font-size:12px;color:#64748b;font-weight:700;margin-bottom:5px}
-.fg input,.fg select{width:100%;padding:11px 12px;border:1.5px solid #e2e8f0;border-radius:10px;font-size:13px;outline:none;font-family:inherit;background:#fff;transition:border .15s,box-shadow .15s}
-.fg input:focus,.fg select:focus{border-color:var(--c3);box-shadow:0 0 0 3px rgba(37,99,235,.08)}
+.fg input,.fg select{width:100%;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:13px;outline:none;font-family:inherit;background:#fff}
+.fg input:focus,.fg select:focus{border-color:#93c5fd;box-shadow:0 0 0 3px rgba(37,99,235,.08)}
 
 /* ── 버튼 ── */
-.btn{border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s}
+.btn{border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s}
 .btn:hover{opacity:.88;transform:translateY(-1px)}
 .btn:active{transform:translateY(0)}
-.btn.pri{background:linear-gradient(135deg,var(--c2),var(--c1));color:#fff;box-shadow:0 3px 10px rgba(37,99,235,.25)}
-.btn.sec{background:var(--c4);color:var(--c2)}.btn.dan{background:#fee2e2;color:#b91c1c}
-.btn.dark{background:#0f172a;color:#fff}.btn.csv{background:#f0fdf4;color:#15803d}
+.btn.pri{background:var(--cp);color:#fff;box-shadow:0 2px 8px rgba(37,99,235,.18)}
+.btn.pri:hover{background:var(--cp-d);box-shadow:0 4px 12px rgba(37,99,235,.28)}
+.btn.sec{background:var(--cp-l);color:var(--cp)}
+.btn.dan{background:#fee2e2;color:#b91c1c}.btn.dark{background:#0f172a;color:#fff}.btn.csv{background:#f0fdf4;color:#15803d}
 .btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
 
 /* ── 자동완성 ── */
@@ -237,6 +202,11 @@ tr:hover td{background:#fafbfc}
 #toast{position:fixed;right:20px;bottom:24px;background:#1e293b;color:#f8fafc;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;opacity:0;transform:translateY(8px);transition:.22s;z-index:9999;pointer-events:none}
 #toast.show{opacity:1;transform:none}
 
+/* ── GAS 상태칩 ── */
+.chip.gas-ok{background:#f0fdf4;color:#15803d;border:1px solid #86efac}
+.chip.gas-local{background:#fff7ed;color:#b45309;border:1px solid #fcd34d}
+.chip.gas-connecting{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0}
+
 /* ── 모달 ── */
 .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:8000;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
@@ -255,6 +225,22 @@ tr:hover td{background:#fafbfc}
 .settings-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
 .set-info{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px;font-size:12px;color:#64748b;line-height:2}
 .set-info code{background:#e2e8f0;padding:1px 5px;border-radius:4px;font-size:11px;color:#0f172a}
+/* 컬러 설정 */
+.color-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
+.cf label{display:block;font-size:11.5px;color:#64748b;font-weight:700;margin-bottom:5px}
+.cf .ci{display:flex;align-items:center;gap:6px}
+.cf input[type=color]{width:38px;height:36px;padding:2px 3px;border:1.5px solid #e2e8f0;border-radius:8px;cursor:pointer;background:#fff;flex-shrink:0}
+.cf input[type=text]{flex:1;min-width:0;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:inherit;outline:none}
+.cf input[type=text]:focus{border-color:var(--cp)}
+/* 이미지 로고 업로드 */
+.logo-upload-area{border:2px dashed #cbd5e1;border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:border .15s,background .15s;position:relative;overflow:hidden}
+.logo-upload-area:hover{border-color:var(--cp);background:var(--cp-l)}
+.logo-upload-area input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.logo-preview{width:56px;height:56px;border-radius:12px;object-fit:cover;margin:0 auto 6px;display:block;border:2px solid #e2e8f0}
+.set-sec-title{font-size:10.5px;font-weight:800;color:#94a3b8;letter-spacing:.07em;text-transform:uppercase;margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid #f1f5f9}
+/* 색상 미리보기 바 */
+.theme-preview{display:flex;gap:6px;margin-top:6px}
+.theme-preview div{flex:1;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700}
 
 /* ── 동기화 배너 ── */
 #sync-banner{display:none;background:#fefce8;border:1.5px solid #fde047;border-radius:12px;padding:12px 16px;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px}
@@ -297,134 +283,35 @@ tr:hover td{background:#fafbfc}
 @media(max-width:900px){
   .search-fields{grid-template-columns:repeat(3,1fr)}
 }
+@media(max-width:600px){
+  .search-fields{grid-template-columns:1fr 1fr}
+  .date-row{flex-direction:column}
+  .quick-btns{gap:4px}
+  .quick-btn{padding:7px 9px;font-size:11px}
+  .action-row{flex-direction:column;align-items:flex-start}
+}
 
-/* ══ 태블릿 ══ */
+/* 기존 모바일 */
 @media(max-width:900px){
   .kpi-row{grid-template-columns:repeat(2,1fr)}
   .settings-grid,.grid2{grid-template-columns:1fr}
-  .side{width:210px}
+  .side{width:200px}
   .frow4{grid-template-columns:1fr 1fr}
   .hist-table{font-size:11.5px}
   .hist-table th,.hist-table td{padding:9px 7px}
-  .topbar{padding:0 16px}
-  .content{padding:16px}
+  .topbar{padding:0 14px}
+  .content{padding:14px}
+  .color-row{grid-template-columns:1fr 1fr}
 }
-
-/* ══ 모바일 전용 ══ */
 @media(max-width:600px){
   .side{display:none}
-  #appWrap{height:100dvh}
-  .layout{height:100%}
-  .main{height:100%;overflow:hidden;display:flex;flex-direction:column}
-  .content{flex:1;padding:12px 12px 80px;overflow-y:auto;-webkit-overflow-scrolling:touch}
-  .topbar{height:52px;padding:0 12px;flex-shrink:0}
-  .tb-left h2{font-size:15px;letter-spacing:-.01em}
-  .tb-left .tb-sub{display:none}
-  .tb-right .chip.gray{display:none}
-  #mobileMenuBtn{display:flex;align-items:center;justify-content:center;width:36px;height:36px;background:none;border:1.5px solid #e2e8f0;border-radius:9px;cursor:pointer;font-size:18px;flex-shrink:0;color:#475569}
-  #mobileNav{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:500;background:#fff;border-top:1.5px solid #e8edf5;box-shadow:0 -4px 24px rgba(30,58,138,.1);height:60px;padding-bottom:env(safe-area-inset-bottom,0px)}
-  .mnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;cursor:pointer;font-family:inherit;color:#94a3b8;font-size:10px;font-weight:700;padding:4px 2px;transition:color .15s;position:relative}
-  .mnav-btn .mico{font-size:20px;line-height:1.2}
-  .mnav-btn.on{color:var(--c2)}
-  .mnav-btn.on .mico{transform:scale(1.1)}
-  .mnav-btn.on::after{content:'';position:absolute;top:0;left:15%;right:15%;height:3px;background:var(--c2);border-radius:0 0 6px 6px}
-  .mnav-badge{position:absolute;top:3px;right:calc(50% - 22px);background:#ef4444;color:#fff;font-size:9px;font-weight:800;padding:1px 5px;border-radius:99px;min-width:16px;text-align:center;display:none;box-shadow:0 1px 4px rgba(239,68,68,.4)}
-  .mnav-badge.show{display:block}
-  #mobileDrawer{display:none;position:fixed;inset:0;z-index:2000}
-  #mobileDrawer.open{display:block}
-  #drawerOverlay{position:absolute;inset:0;background:rgba(0,0,0,.5)}
-  #drawerPanel{position:absolute;left:0;top:0;bottom:0;width:268px;background:linear-gradient(180deg,var(--sidebar-from),var(--sidebar-to));display:flex;flex-direction:column;overflow-y:auto;box-shadow:4px 0 24px rgba(0,0,0,.3);animation:slideIn .22s cubic-bezier(.22,1,.36,1)}
-  @keyframes slideIn{from{transform:translateX(-100%)}to{transform:translateX(0)}}
-  .drawer-brand{padding:22px 16px 14px;border-bottom:1px solid rgba(255,255,255,.1);display:flex;align-items:center;gap:10px}
-  .drawer-logo{width:40px;height:40px;background:linear-gradient(135deg,#fff,#c7d7ff);color:var(--sidebar-from);border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:14px;flex-shrink:0;overflow:hidden}
-  .drawer-logo img{width:100%;height:100%;object-fit:cover}
-  .drawer-name{font-size:14px;font-weight:800;color:#fff}
-  .drawer-sub{font-size:11px;color:rgba(255,255,255,.4)}
-  .drawer-close{margin-left:auto;background:rgba(255,255,255,.1);border:none;border-radius:8px;width:32px;height:32px;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .drawer-nav{padding:8px;flex:1}
-  .drawer-sec{padding:14px 10px 4px;font-size:10px;color:rgba(255,255,255,.3);font-weight:800;letter-spacing:.07em}
-  .drawer-btn{display:flex;align-items:center;gap:10px;width:100%;padding:12px 12px;background:none;border:none;color:rgba(255,255,255,.75);font-size:13.5px;font-weight:600;cursor:pointer;border-radius:10px;text-align:left;font-family:inherit;transition:all .15s;margin-bottom:2px}
-  .drawer-btn:active,.drawer-btn.on{background:rgba(255,255,255,.14);color:#fff}
-  .drawer-btn .ico{font-size:17px;width:22px;text-align:center}
   .frow,.frow3,.frow4{grid-template-columns:1fr}
-  /* 입출고 등록 */
-  #tab-reg .grid2{display:block}
-  #tab-reg .grid2>div:last-child{display:none}
-  #tab-reg .card{margin-bottom:0}
-  #tab-reg .card-hd{padding:14px 14px 12px}
-  #tab-reg .card-bd{padding:12px 14px 16px}
-  #tab-reg .frow:first-child{grid-template-columns:1fr 1fr}
-  .fg input,.fg select{padding:14px 13px;font-size:15px;border-radius:12px;min-height:50px}
-  .fg label{font-size:12.5px;font-weight:700;margin-bottom:5px}
-  #tab-reg .btns{gap:8px;margin-top:16px}
-  #tab-reg .btns .btn.pri{flex:2;padding:16px;font-size:16px;font-weight:800;border-radius:14px;letter-spacing:.02em;box-shadow:0 6px 20px rgba(37,99,235,.35)}
-  #tab-reg .btns .btn:not(.pri){flex:1;padding:14px;font-size:13px}
-  .stock-prev{border-radius:12px;padding:12px 14px}
-  .sp-val{font-size:26px}
-  .ac-list{max-height:160px}
-  .ac-item{padding:12px 14px;font-size:14px}
-  /* 재고조회 카드형 */
-  #tab-stock .toolbar{flex-direction:column;gap:8px;margin-bottom:10px}
-  #tab-stock .toolbar .fg{flex:none;width:100%}
-  #tab-stock .toolbar .fit{width:100%;display:flex;gap:8px}
-  #tab-stock .toolbar .fit .btn{flex:1;padding:13px;font-size:13px}
-  #tab-stock .card-bd{padding:0}
-  #tab-stock table,#tab-stock tbody,#tab-stock tr,#tab-stock td{display:block;width:100%}
-  #tab-stock table thead{display:none}
-  #tab-stock tbody tr{padding:13px 14px 10px;border-bottom:1.5px solid #f1f5f9;background:#fff}
-  #tab-stock tbody tr:last-child{border-bottom:none}
-  #tab-stock table td{padding:2px 0;border:none;display:flex;justify-content:space-between;align-items:center;font-size:12.5px}
-  #tab-stock table td:empty{display:none}
-  #tab-stock table td[data-label]::before{content:attr(data-label);color:#94a3b8;font-size:11px;font-weight:700;flex-shrink:0}
-  #tab-stock table td.r{text-align:right;font-weight:700}
-  #skKw,#skStatus{padding:13px 12px;font-size:14px;min-height:48px}
-  /* 부족재고 카드형 */
-  #tab-short .card-bd{padding:0}
-  #tab-short table,#tab-short tbody,#tab-short tr,#tab-short td{display:block;width:100%}
-  #tab-short table thead{display:none}
-  #tab-short tbody tr{padding:14px;border-bottom:1.5px solid #f1f5f9;position:relative}
-  #tab-short tbody tr.row-danger{background:#fff5f5}
-  #tab-short tbody tr.row-low{background:#fffbeb}
-  #tab-short table td:last-child{position:absolute;top:12px;right:12px;padding:0;border:none;width:auto;display:block}
-  #tab-short table td:not(:last-child){padding:2px 0;border:none;display:flex;justify-content:space-between;font-size:13px}
-  #tab-short table td[data-label]::before{content:attr(data-label);color:#94a3b8;font-size:11px;font-weight:700}
-  #tab-short table td[data-label="품목명"]{font-size:14px;font-weight:800;color:#0f172a;padding-bottom:6px;margin-bottom:4px;border-bottom:1px dashed #f1f5f9}
-  #tab-short table td[data-label="품목명"]::before{display:none}
-  /* KPI */
-  .kpi-row{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-  .kpi-val{font-size:24px}
-  .kpi-card{padding:12px 14px}
-  .kpi-ico{font-size:18px;margin-bottom:4px}
-  .kpi-lbl{font-size:10px}
-  .kpi-meta{font-size:10px}
-  /* 공통 카드 */
-  .card{border-radius:14px;margin-bottom:12px}
-  .card-hd{padding:12px 14px}
-  .card-hd h3{font-size:14px}
-  .card-bd{padding:12px 14px}
-  /* 검색 패널 */
-  .search-fields{grid-template-columns:1fr}
-  .date-row{flex-direction:column;gap:8px}
-  .quick-btns{gap:4px}
-  .quick-btn{padding:9px 10px;font-size:11.5px}
-  .action-row{flex-direction:column;gap:8px;margin-top:10px;padding-top:10px}
-  .action-row-left,.action-row-right{display:flex;gap:8px}
-  .action-row-right .btn{flex:1}
-  .search-panel{padding:14px 14px}
-  .settings-grid{grid-template-columns:1fr}
-  .set-info{font-size:11px}
+  .kpi-row{grid-template-columns:1fr 1fr}
+  .topbar{height:54px}
+  .tb-left h2{font-size:16px}
+  .color-row{grid-template-columns:1fr}
+  .login-wrap{width:94%;padding:10px}
 }
-
-/* PC에서 모바일 전용 요소 숨김 */
-@media(min-width:601px){
-  #mobileNav{display:none}
-  #mobileMenuBtn{display:none}
-  #mobileDrawer{display:none}
-}
-
-/* 로고 이미지 공통 구조 */
-.brand-logo img,.login-logo img{width:100%;height:100%;object-fit:contain;border-radius:inherit}
-
 
 /* ── 테이블 스크롤바 커스텀 (v8) ── */
 .tbl-wrap::-webkit-scrollbar{height:6px}
@@ -446,23 +333,67 @@ tr:hover td{background:#fafbfc}
 .hist-table td.td-wh{color:#475569;font-size:12px}
 </style>
 
-  <!-- 외부 배지 주입 방어 -->
-  <style>[id*="skywork"],[class*="skywork"]{display:none!important;position:absolute!important;top:-9999px!important}</style>
-  <script>(function(){var o=new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(n){if(n&&n.nodeType===1&&((n.id||'').toLowerCase().indexOf('skywork')!==-1||(n.className||'').toLowerCase().indexOf('skywork')!==-1)){n.parentNode&&n.parentNode.removeChild(n);}});});});document.addEventListener('DOMContentLoaded',function(){o.observe(document.body,{childList:true,subtree:true});});})();</script>
+  <!-- v8: Skywork 배지 완전 제거 -->
+  <style>
+    #skywork-badge,
+    [id*="skywork"],
+    [class*="skywork-badge"],
+    [id*="sw-badge"],
+    [class*="sw-badge"] {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+      pointer-events: none !important;
+      width: 0 !important;
+      height: 0 !important;
+      overflow: hidden !important;
+      position: absolute !important;
+      top: -9999px !important;
+      left: -9999px !important;
+    }
+  </style>
+  <script>
+    (function() {
+      // DOM 감시 — 배지가 주입되는 즉시 제거
+      var _obs = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+          m.addedNodes.forEach(function(node) {
+            if (!node || node.nodeType !== 1) return;
+            var id = (node.id || '').toLowerCase();
+            var cls = (node.className || '').toLowerCase();
+            if (id.indexOf('skywork') !== -1 || cls.indexOf('skywork') !== -1 ||
+                id.indexOf('sw-badge') !== -1 || cls.indexOf('sw-badge') !== -1) {
+              node.parentNode && node.parentNode.removeChild(node);
+            }
+          });
+        });
+      });
+      document.addEventListener('DOMContentLoaded', function() {
+        _obs.observe(document.body, { childList: true, subtree: true });
+        // 혹시 이미 있으면 즉시 제거
+        ['skywork-badge'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.parentNode && el.parentNode.removeChild(el);
+        });
+      });
+    })();
+  </script>
 </head>
 <body>
 
 <!-- ══ 로그인 화면 ══ -->
 <div id="loginScreen">
-  <div class="login-box">
-    <div class="login-logo" id="loginLogo">KY</div>
-    <h2 id="loginTitle">KY 스마트공장</h2>
-    <div class="login-sub" id="loginSub">재고·물류관리 시스템</div>
-    <div class="lf"><label>아이디</label><input id="loginId" type="text" placeholder="아이디 입력" autocomplete="username"></div>
-    <div class="lf"><label>비밀번호</label><input id="loginPw" type="password" placeholder="비밀번호 입력" autocomplete="current-password"></div>
-    <button id="loginBtn">로그인</button>
-    <div id="loginErr"></div>
-    <div class="login-footer">스마트공장 납품형 v10 · <span id="loginBuildVer"></span></div>
+  <div class="login-wrap">
+    <div class="login-box">
+      <div class="login-logo" id="loginLogo">KY</div>
+      <h2 id="loginTitle">KY 재고관리</h2>
+      <div class="login-sub" id="loginSub">스마트공장 재고·물류관리 시스템</div>
+      <div class="lf"><label>아이디</label><input id="loginId" type="text" placeholder="아이디 입력" autocomplete="username"></div>
+      <div class="lf"><label>비밀번호</label><input id="loginPw" type="password" placeholder="비밀번호 입력" autocomplete="current-password"></div>
+      <button id="loginBtn">로그인</button>
+      <div id="loginErr"></div>
+    </div>
+    <div class="login-footer" id="loginFooter">Powered by Smart Factory ERP</div>
   </div>
 </div>
 
@@ -474,7 +405,7 @@ tr:hover td{background:#fafbfc}
     <aside class="side">
       <div class="side-brand">
         <span class="brand-logo" id="sLogo">KY</span><span class="brand-name" id="sName">KY 재고관리</span>
-        <div class="brand-sub" id="sSub">스마트공장 납품형 v10 · <span id="sideBuildVer"></span></div>
+        <div class="brand-sub" id="sBrandSub">스마트공장 납품형 v10</div>
       </div>
       <div class="nav-sec">메인</div>
       <button class="nav-btn on" data-tab="dash"><span class="ico">🏠</span>대시보드</button>
@@ -488,10 +419,8 @@ tr:hover td{background:#fafbfc}
       <button class="nav-btn" data-tab="stats"><span class="ico">📊</span>통계 / 리포트</button>
       <div class="nav-sec">설정</div>
       <button class="nav-btn" data-tab="settings"><span class="ico">⚙️</span>시스템 설정</button>
-      <div style="margin-top:auto;padding:12px 8px 8px">
-        <button onclick="kyDoLogout()" style="width:100%;padding:9px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:#94a3b8;font-size:12px;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(239,68,68,0.2)';this.style.color='#fca5a5'" onmouseout="this.style.background='rgba(255,255,255,0.07)';this.style.color='#94a3b8'">
-          🚪 로그아웃
-        </button>
+      <div class="side-bottom">
+        <button class="logout-btn" onclick="kyDoLogout()">🚪 <span>로그아웃</span></button>
       </div>
     </aside>
 
@@ -504,14 +433,12 @@ tr:hover td{background:#fafbfc}
         </div>
         <div class="tb-right">
           <span class="chip gray" id="todayTxt"></span>
-          <span class="chip green" id="onlineChip" style="font-size:11px">🟢 온라인</span>
+          <span id="gasStatusChip" class="chip gas-connecting" title="저장 방식 상태">⏳ 연결 확인 중</span>
+          <div class="user-chip">
+            <div class="user-av" id="userAv">A</div>
+            <span id="userNameTxt">관리자</span>
+          </div>
           <span class="chip blue" id="compChip">KY 재고관리</span>
-          <!-- Android Chrome: 홈화면 추가 버튼 (자동 표시) -->
-          <button id="pwaInstallBtn" onclick="pwaInstall()" title="홈화면에 설치"
-            style="display:none;align-items:center;gap:5px;background:linear-gradient(135deg,var(--c2),var(--c1));color:#fff;border:none;border-radius:9px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">
-            📲 설치
-          </button>
-          <button id="mobileMenuBtn" onclick="openDrawer()">☰</button>
         </div>
       </div>
 
@@ -519,20 +446,13 @@ tr:hover td{background:#fafbfc}
 
         <!-- ━━ 대시보드 ━━ -->
         <div class="tab on" id="tab-dash">
-          <!-- 연결 상태 배너 — JS가 동적으로 내용/색상 교체 -->
           <div id="sync-banner">
-            <span style="font-size:18px" id="syncBannerIco">📡</span>
+            <span style="font-size:18px">📡</span>
             <div style="flex:1">
-              <div style="font-weight:800;font-size:13px" id="syncBannerTitle">연결 확인 중...</div>
-              <div style="font-size:12px;margin-top:2px" id="syncBannerSub">GAS URL을 확인하고 있습니다.</div>
+              <div style="font-weight:800;font-size:13px;color:#854d0e">미연결 — 로컬 데이터 표시 중</div>
+              <div style="font-size:12px;color:#a16207;margin-top:2px">설정 탭에서 GAS URL 입력 후 동기화 버튼을 눌러주세요.</div>
             </div>
-            <button class="btn sec" style="font-size:12px;padding:7px 12px" id="syncBannerBtn" onclick="manualSync()">🔄 동기화</button>
-          </div>
-          <!-- 동기화 상태 칩 행 -->
-          <div id="syncStatusRow" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-            <span class="chip gray" id="syncStateChip">⏳ 로딩 중...</span>
-            <span class="chip gray" id="syncTimeChip2" style="font-size:11px">마지막 동기화: -</span>
-            <span class="chip gray" id="gasUrlChip" style="font-size:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">GAS: 확인 중</span>
+            <button class="btn sec" style="font-size:12px;padding:7px 12px" onclick="goTab('settings')">⚙️ 설정</button>
           </div>
           <div class="kpi-row">
             <div class="kpi-card navy"><div class="kpi-ico">📦</div><div class="kpi-lbl">총 품목 수</div><div class="kpi-val" id="kpiItems">0</div><div class="kpi-meta">품목마스터 기준</div></div>
@@ -764,9 +684,10 @@ tr:hover td{background:#fafbfc}
         <!-- ━━ 재고 조회 ━━ -->
         <div class="tab" id="tab-stock">
           <div class="toolbar">
-            <div class="fg"><label>검색</label><input id="skKw" placeholder="품목코드·품목명" oninput="renderStock()"></div>
-            <div class="fg"><label>상태</label><select id="skStatus" onchange="renderStock()"><option value="">전체</option><option value="ok">정상만</option><option value="low">부족만</option></select></div>
+            <div class="fg"><label>검색</label><input id="skKw" placeholder="품목코드·품목명"></div>
+            <div class="fg"><label>상태</label><select id="skStatus"><option value="">전체</option><option value="ok">정상만</option><option value="low">부족만</option></select></div>
             <div class="fit btns" style="margin-top:0">
+              <button class="btn pri" onclick="renderStock()">조회</button>
               <button class="btn sec" onclick="resetStock()">초기화</button>
               <button class="btn csv" onclick="exportStockCSV()">⬇ CSV</button>
             </div>
@@ -841,79 +762,94 @@ tr:hover td{background:#fafbfc}
         <!-- ━━ 설정 ━━ -->
         <div class="tab" id="tab-settings">
           <div class="settings-grid">
+
+            <!-- 브랜드 설정 -->
             <div class="card">
-              <div class="card-hd"><h3>🎨 브랜드 / 기본 설정</h3></div>
+              <div class="card-hd"><h3>회사 / 브랜드 설정</h3></div>
               <div class="card-bd" style="display:grid;gap:12px">
-                <div class="fg"><label>회사명</label><input id="setCo" placeholder="예: 오성정공 재고시스템"></div>
-                <div class="fg"><label>로고 문자 (2~3자)</label><input id="setLogo" placeholder="예: OS" maxlength="3"></div>
-                <div class="fg">
-                  <label>로고 이미지 URL <span style="color:#94a3b8;font-size:11px;font-weight:400">(선택 — 입력 시 문자 대신 이미지 표시)</span></label>
-                  <input id="setLogoImg" placeholder="https://... (png/svg 권장)" oninput="previewLogoImg(this.value)">
-                  <div id="logoImgPreview" style="display:none;margin-top:8px;align-items:center;gap:10px">
-                    <img id="logoImgThumb" style="width:44px;height:44px;border-radius:10px;object-fit:contain;border:1px solid #e2e8f0;background:#f8fafc">
-                    <span style="font-size:12px;color:#64748b">미리보기</span>
-                    <button onclick="clearLogoImg()" style="border:none;background:none;color:#94a3b8;cursor:pointer;font-size:12px">✕ 제거</button>
-                  </div>
-                </div>
-                <div class="fg"><label>메인 컬러 테마</label>
-                  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px" id="colorPicker">
-                    <div class="color-swatch" data-c1="#1e3a8a" data-c2="#2563eb" style="background:linear-gradient(135deg,#1e3a8a,#2563eb)" title="블루 (기본)"></div>
-                    <div class="color-swatch" data-c1="#064e3b" data-c2="#059669" style="background:linear-gradient(135deg,#064e3b,#059669)" title="그린"></div>
-                    <div class="color-swatch" data-c1="#7c2d12" data-c2="#ea580c" style="background:linear-gradient(135deg,#7c2d12,#ea580c)" title="오렌지"></div>
-                    <div class="color-swatch" data-c1="#581c87" data-c2="#9333ea" style="background:linear-gradient(135deg,#581c87,#9333ea)" title="퍼플"></div>
-                    <div class="color-swatch" data-c1="#1e293b" data-c2="#475569" style="background:linear-gradient(135deg,#1e293b,#475569)" title="다크"></div>
-                    <div class="color-swatch" data-c1="#7f1d1d" data-c2="#dc2626" style="background:linear-gradient(135deg,#7f1d1d,#dc2626)" title="레드"></div>
-                  </div>
-                  <style>
-                    .color-swatch{width:32px;height:32px;border-radius:8px;cursor:pointer;border:3px solid transparent;transition:all .15s;box-shadow:0 2px 6px rgba(0,0,0,.15)}
-                    .color-swatch:hover{transform:scale(1.1)}
-                    .color-swatch.selected{border-color:#fff;box-shadow:0 0 0 2px var(--c2),0 2px 8px rgba(0,0,0,.2)}
-                  </style>
-                </div>
+                <div class="set-sec-title">회사 정보</div>
+                <div class="fg"><label>회사명</label><input id="setCo" placeholder="예: ABC정밀 주식회사"></div>
+                <div class="fg"><label>로고 문자 (2~3자)</label><input id="setLogo" placeholder="예: AB" maxlength="3"></div>
+                <div class="fg"><label>시스템 부제 (로그인 화면)</label><input id="setSubtitle" placeholder="예: 스마트공장 재고관리"></div>
+                <div class="fg"><label>하단 푸터 문구</label><input id="setFooter" placeholder="예: Powered by ABC ERP"></div>
+                <div class="fg"><label>관리자 연락처 (선택)</label><input id="setContact" placeholder="예: 010-0000-0000"></div>
+                <div class="set-sec-title" style="margin-top:2px">기본값</div>
                 <div class="fg"><label>기본 담당자</label><input id="setMgr"></div>
-                <div class="fg"><label>기본 창고</label><select id="setWh"></select></div>
-                <div class="fg"><label>페이지당 건수</label><select id="setPgSz"><option value="20">20</option><option value="50">50</option><option value="100">100</option></select></div>
-                <div class="btns"><button class="btn pri" onclick="saveSettings()">💾 설정 저장</button></div>
+                <div class="fg"><label>기본 정장</label><select id="setWh"></select></div>
+                <div class="fg"><label>페이지당 건수</label><select id="setPgSz"><option value="20">20건</option><option value="50">50건</option><option value="100">100건</option></select></div>
+                <div class="btns"><button class="btn pri" onclick="saveSettings()">&#128190; 설정 저장 · 즉시 반영</button></div>
               </div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:16px">
-            <!-- ── 연동 상태 (모든 사용자 노출) ── -->
+
+            <!-- 이미지 로고 + 콜러 테마 -->
             <div class="card">
-              <div class="card-hd"><h3>🔗 Google Sheets 연동 상태</h3></div>
+              <div class="card-hd"><h3>이미지 로고 + 콜러 테마</h3></div>
               <div class="card-bd" style="display:grid;gap:12px">
-                <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-                  <span class="chip gray" id="connState">⏸ 확인 중...</span>
-                  <span class="chip gray" id="syncTimeChip">마지막 동기화: 없음</span>
-                </div>
-                <div class="btns">
-                  <button class="btn dark" onclick="doRefreshAll()">🔄 전체 새로고침</button>
-                  <button class="btn sec" onclick="syncMasterNow()">🔄 품목 동기화</button>
-                  <button class="btn sec" onclick="syncTxNow()">🔄 이력 동기화</button>
-                </div>
-              </div>
-            </div>
-            <!-- ── GAS URL 설정 (admin 전용) ── -->
-            <div class="card" id="gasAdminCard" style="display:none">
-              <div class="card-hd">
-                <h3>⚙️ Apps Script 연동 설정 <span style="font-size:11px;color:#94a3b8;font-weight:400">(관리자 전용)</span></h3>
-              </div>
-              <div class="card-bd" style="display:grid;gap:12px">
-                <div class="fg">
-                  <label>Apps Script URL</label>
-                  <input id="setGasUrl" placeholder="https://script.google.com/macros/s/.../exec">
-                  <div style="margin-top:6px;font-size:11px;color:#94a3b8">
-                    💡 여기에 URL을 저장하면 이 기기에서만 적용됩니다.<br>
-                    모든 기기 공통 적용은 index.html의 <code>GAS_URL</code> 값을 직접 수정하세요.
+                <div class="set-sec-title">이미지 로고 (선택)</div>
+                <div class="logo-upload-area" id="logoUploadArea">
+                  <input type="file" id="logoFileInput" accept="image/png,image/jpeg,image/gif,image/webp" onchange="onLogoUpload(event)">
+                  <img id="logoPreviewImg" class="logo-preview" src="" style="display:none">
+                  <div id="logoUploadHint" style="font-size:12px;color:#64748b">
+                    <div style="font-size:22px;margin-bottom:4px">🖼️</div>
+                    PNG / JPG 클릭하여 업로드<br>
+                    <span style="font-size:11px;color:#94a3b8">이미지가 있으면 텍스트 로고 대신 표시</span>
                   </div>
                 </div>
+                <button class="btn dan" style="font-size:12px;padding:7px 12px" onclick="removeLogoImg()">로고 이미지 제거</button>
+
+                <div class="set-sec-title" style="margin-top:2px">콜러 테마 — 저장 시 즉시 반영</div>
+                <div class="color-row">
+                  <div class="cf"><label>메인 컬러</label><div class="ci"><input type="color" id="setClrPrimary" value="#2563eb" oninput="syncColor('setClrPrimary','setClrPrimaryTxt')"><input type="text" id="setClrPrimaryTxt" value="#2563eb" maxlength="7" oninput="syncColorTxt('setClrPrimaryTxt','setClrPrimary')"></div></div>
+                  <div class="cf"><label>강조 컬러</label><div class="ci"><input type="color" id="setClrAccent" value="#16a34a" oninput="syncColor('setClrAccent','setClrAccentTxt')"><input type="text" id="setClrAccentTxt" value="#16a34a" maxlength="7" oninput="syncColorTxt('setClrAccentTxt','setClrAccent')"></div></div>
+                  <div class="cf"><label>경고 컬러</label><div class="ci"><input type="color" id="setClrAmber" value="#d97706" oninput="syncColor('setClrAmber','setClrAmberTxt')"><input type="text" id="setClrAmberTxt" value="#d97706" maxlength="7" oninput="syncColorTxt('setClrAmberTxt','setClrAmber')"></div></div>
+                </div>
+                <div class="color-row">
+                  <div class="cf"><label>사이드바 상단</label><div class="ci"><input type="color" id="setClrSideTop" value="#0f2747" oninput="syncColor('setClrSideTop','setClrSideTopTxt')"><input type="text" id="setClrSideTopTxt" value="#0f2747" maxlength="7" oninput="syncColorTxt('setClrSideTopTxt','setClrSideTop')"></div></div>
+                  <div class="cf"><label>사이드바 하단</label><div class="ci"><input type="color" id="setClrSideBtm" value="#1a3a6b" oninput="syncColor('setClrSideBtm','setClrSideBtmTxt')"><input type="text" id="setClrSideBtmTxt" value="#1a3a6b" maxlength="7" oninput="syncColorTxt('setClrSideBtmTxt','setClrSideBtm')"></div></div>
+                  <div class="cf"><label>로그인 배경</label><div class="ci"><input type="color" id="setClrLoginTop" value="#0a1628" oninput="syncColor('setClrLoginTop','setClrLoginTopTxt')"><input type="text" id="setClrLoginTopTxt" value="#0a1628" maxlength="7" oninput="syncColorTxt('setClrLoginTopTxt','setClrLoginTop')"></div></div>
+                </div>
+                <div class="theme-preview" id="themePreview">
+                  <div style="background:var(--cp)">메인</div>
+                  <div style="background:var(--ca)">강조</div>
+                  <div style="background:var(--cam)">경고</div>
+                  <div style="background:linear-gradient(135deg,var(--cs-t),var(--cs-b))">사이드바</div>
+                </div>
+                <div style="display:flex;gap:8px">
+                  <button class="btn pri" onclick="saveSettings()" style="flex:1">&#128190; 저장 · 즉시 반영</button>
+                  <button class="btn sec" onclick="resetTheme()">기본값 복원</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- GAS 연동 -->
+            <div class="card">
+              <div class="card-hd"><h3>Apps Script 연동</h3></div>
+              <div class="card-bd" style="display:grid;gap:12px">
+                <div class="fg"><label>Apps Script URL</label><input id="setGasUrl" placeholder="https://script.google.com/macros/s/..."></div>
                 <div class="fg"><label>저장 방식</label>
-                  <select id="setUseGas"><option value="Y">Google Sheets 저장</option><option value="N">로컬만 사용</option></select>
+                  <select id="setUseGas"><option value="N">로컬만 사용 (오프라인)</option><option value="Y">Google Sheets 저장</option></select>
                 </div>
                 <div class="btns">
                   <button class="btn pri" onclick="testGas()">🔌 연결 테스트</button>
+                  <button class="btn dark" onclick="doRefreshAll()">&#128260; 전체 새로고침</button>
                 </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <span class="chip gray" id="connState">⏸ 미연결</span>
+                  <span class="chip gray" id="syncTimeChip">마지막 동기화: 없음</span>
+                </div>
+                <div class="btns">
+                  <button class="btn sec" onclick="syncMasterNow()">&#128260; 품목 동기화</button>
+                  <button class="btn sec" onclick="syncTxNow()">&#128260; 이력 동기화</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Apps Script 마이크로가이드 -->
+            <div class="card">
+              <div class="card-hd"><h3>Apps Script 액션 명세</h3></div>
+              <div class="card-bd">
                 <div class="set-info">
-                  <strong>필수 action명 (Code.gs)</strong><br>
+                  <strong>Code.gs 필수 action명</strong><br>
                   저장: <code>saveTransactionGet</code><br>
                   품목저장: <code>saveMasterItemGet</code><br>
                   품목삭제: <code>deleteMasterItem</code><br>
@@ -921,121 +857,19 @@ tr:hover td{background:#fafbfc}
                   이력조회: <code>getTransactions</code><br>
                   대시보드: <code>dashboard</code> / 테스트: <code>test</code>
                 </div>
-              </div>
-            </div>
-            <div class="card" id="pwCard" style="display:none">
-              <div class="card-hd"><h3>🔒 비밀번호 변경</h3></div>
-              <div class="card-bd" style="display:grid;gap:12px">
-                <div class="fg"><label>현재 비밀번호</label><input id="pwCurrent" type="password" placeholder="현재 비밀번호"></div>
-                <div class="fg"><label>새 비밀번호</label><input id="pwNew" type="password" placeholder="새 비밀번호 (4자 이상)"></div>
-                <div class="fg"><label>새 비밀번호 확인</label><input id="pwConfirm" type="password" placeholder="재입력"></div>
-                <div class="btns"><button class="btn pri" onclick="changeMyPassword()">🔒 비밀번호 변경</button></div>
-              </div>
-            </div>
-            <!-- ── PWA 앱 설치 안내 ── -->
-            <div class="card" id="pwaGuideCard">
-              <div class="card-hd"><h3>📱 홈화면 앱 설치</h3></div>
-              <div class="card-bd" style="display:grid;gap:14px">
-                <!-- Android -->
-                <div id="pwaAndroidGuide">
-                  <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:6px">🤖 Android (Chrome)</div>
-                  <div style="font-size:12px;color:#64748b;line-height:1.8">
-                    주소창 우측 <strong>⋮ 메뉴</strong> → <strong>홈 화면에 추가</strong><br>
-                    또는 상단 <strong>📲 설치</strong> 버튼 클릭
-                  </div>
-                  <div class="btns" style="margin-top:10px">
-                    <button class="btn pri" onclick="pwaInstall()" style="font-size:13px;padding:11px 16px">📲 홈화면에 설치</button>
-                  </div>
-                </div>
-                <hr style="border:none;border-top:1px solid #f1f5f9">
-                <!-- iOS -->
-                <div>
-                  <div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:6px">🍎 iPhone / iPad (Safari)</div>
-                  <div style="font-size:12px;color:#64748b;line-height:2">
-                    ① Safari에서 이 페이지 열기<br>
-                    ② 하단 <strong>공유 버튼 (□↑)</strong> 탭<br>
-                    ③ <strong>홈 화면에 추가</strong> 선택<br>
-                    ④ 이름 확인 후 <strong>추가</strong>
-                  </div>
-                </div>
-                <hr style="border:none;border-top:1px solid #f1f5f9">
-                <div style="font-size:11px;color:#94a3b8;line-height:1.8">
-                  설치 후 아이콘 실행 시 주소창 없이 앱처럼 동작합니다.<br>
-                  오프라인에서도 기본 화면이 유지됩니다.
-                </div>
-                <hr style="border:none;border-top:1px solid #f1f5f9">
-                <div>
-                  <div style="font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px">🔧 버전 / 캐시 상태</div>
-                  <div id="buildStatusBox" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;font-size:11px;line-height:2;color:#475569;margin-bottom:10px">
-                    <div>앱 빌드: <strong id="statusBuildId" style="color:#1e3a8a;font-family:monospace">확인 중...</strong></div>
-                    <div>SW 빌드: <strong id="statusSwBuildId" style="color:#1e3a8a;font-family:monospace">확인 중...</strong></div>
-                    <div>GAS URL: <strong id="statusGasUrl" style="color:#059669;word-break:break-all">확인 중...</strong></div>
-                    <div>연결 출처: <strong id="statusGasSource" style="color:#7c3aed">-</strong></div>
-                  </div>
-                  <div style="display:flex;gap:8px;flex-wrap:wrap">
-                    <button class="btn sec" onclick="refreshBuildStatus()" style="font-size:12px;padding:9px 14px">🔍 상태 확인</button>
-                    <button class="btn sec" onclick="swClearCache()" style="font-size:12px;padding:9px 14px">🗑️ 캐시 초기화</button>
-                    <button class="btn dan" onclick="hardReload()" style="font-size:12px;padding:9px 14px">🔄 강제 새로고침</button>
-                  </div>
+                <div class="set-info" style="margin-top:10px">
+                  <strong>자동동기화</strong>: GAS 모드 활성 시 <code>10초</code> 간격<br>
+                  <strong>데이터</strong>: localStorage + Google Sheets 이중 저장
                 </div>
               </div>
             </div>
-            </div>
+
           </div>
         </div>
 
       </div><!-- /content -->
     </div><!-- /main -->
   </div><!-- /layout -->
-<!-- ══ 모바일 하단 네비게이션 ══ -->
-<nav id="mobileNav">
-  <button class="mnav-btn on" data-tab="reg" onclick="mNavTo('reg')">
-    <span class="mico">📝</span>입출고
-  </button>
-  <button class="mnav-btn" data-tab="stock" onclick="mNavTo('stock')">
-    <span class="mico">📦</span>재고조회
-  </button>
-  <button class="mnav-btn" data-tab="short" onclick="mNavTo('short')">
-    <span class="mico">⚠️</span>부족재고
-    <span class="mnav-badge" id="mNavBadge"></span>
-  </button>
-  <button class="mnav-btn" data-tab="dash" onclick="mNavTo('dash')">
-    <span class="mico">🏠</span>대시보드
-  </button>
-</nav>
-
-<!-- ══ 모바일 드로어 메뉴 ══ -->
-<div id="mobileDrawer">
-  <div id="drawerOverlay" onclick="closeDrawer()"></div>
-  <div id="drawerPanel">
-    <div class="drawer-brand">
-      <div class="drawer-logo" id="drawerLogo">KY</div>
-      <div>
-        <div class="drawer-name" id="drawerName">KY 재고관리</div>
-        <div class="drawer-sub">스마트공장 납품형</div>
-      </div>
-      <button class="drawer-close" onclick="closeDrawer()">✕</button>
-    </div>
-    <div class="drawer-nav">
-      <div class="drawer-sec">메인</div>
-      <button class="drawer-btn" data-tab="dash" onclick="drawerTo('dash')"><span class="ico">🏠</span>대시보드</button>
-      <div class="drawer-sec">운영</div>
-      <button class="drawer-btn" data-tab="reg" onclick="drawerTo('reg')"><span class="ico">📝</span>입출고 등록</button>
-      <button class="drawer-btn" data-tab="hist" onclick="drawerTo('hist')"><span class="ico">📋</span>입출고 이력</button>
-      <button class="drawer-btn" data-tab="stock" onclick="drawerTo('stock')"><span class="ico">📦</span>재고 조회</button>
-      <button class="drawer-btn" data-tab="short" onclick="drawerTo('short')"><span class="ico">⚠️</span>부족 재고</button>
-      <button class="drawer-btn" data-tab="master" onclick="drawerTo('master')"><span class="ico">🗂️</span>품목 마스터</button>
-      <div class="drawer-sec">분석</div>
-      <button class="drawer-btn" data-tab="stats" onclick="drawerTo('stats')"><span class="ico">📊</span>통계 / 리포트</button>
-      <div class="drawer-sec">설정</div>
-      <button class="drawer-btn" data-tab="settings" onclick="drawerTo('settings')"><span class="ico">⚙️</span>시스템 설정</button>
-      <div style="padding:16px 8px 8px">
-        <button onclick="kyDoLogout();closeDrawer()" style="width:100%;padding:12px;background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);border-radius:10px;color:#fca5a5;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">🚪 로그아웃</button>
-      </div>
-    </div>
-  </div>
-</div>
-
 </div><!-- /appWrap -->
 
 <!-- 경고 모달 -->
@@ -1056,103 +890,64 @@ tr:hover td{background:#fafbfc}
 <script>
 'use strict';
 /* ══════════════════════════════════════════════════════════════
-   스마트공장 재고·물류관리 시스템 v9 (납품형)
-   · CONFIG 블록만 수정 → 고객사 커스터마이징 완료
-   · CSS 변수 기반 컬러 테마 실시간 변경
-   · 다운로드 파일명 자동 회사명 반영
-   · GAS 연동·자동동기화·바코드 전부 유지
+   KY 재고·물류관리 시스템 v6
+   GitHub 최신본 기준 — 입출고이력 11컬럼 확장
+   ① 날짜 ② 바코드 ③ 품목명 ④ 구분 ⑤ 수량
+   ⑥ 입고가격 ⑦ 출고가격 ⑧ 현재재고(누적) ⑨ 창고
+   ⑩ 현장명 ⑪ 담당자
+   로그인: admin / ky1234
 ══════════════════════════════════════════════════════════════ */
 
-/* ─── 고객사 설정 블록 — 실운영형 ─── */
+/* ─── 고객사 설정 블록 ─── */
 var CONFIG = {
-  CLIENT_ID:   'smartinv',
-  COMPANY:     '스마트공장 재고관리',
-  LOGO_TEXT:   'SI',
-  SUBTITLE:    '스마트공장 납품형 v10',
-
-  /* ★ 실운영 GAS URL — 이 값이 모든 기기의 기본값이 됩니다 ★
-     배포 후 여기에 Apps Script URL을 붙여넣으면
-     카톡 링크로 접속한 누구든 설정 없이 바로 사용합니다.      */
-  GAS_URL:     'https://script.google.com/macros/s/AKfycbwkvK3UdQVAm8L7B4fM-P_24hbmkGUCzgjFiNb6ne0bVmjJ37NWDOHRx_kfhWsbGnitmg/exec',
-
-  THEME_C1:    '#1e3a8a',
-  THEME_C2:    '#2563eb',
-  WAREHOUSES:  ['본사창고', '현장창고'],
+  /* ★ 납품 시 이 블록만 수정하면 고객사 브랜드로 전환됩니다 ★ */
+  CLIENT_ID: 'ky',
+  COMPANY: 'KY 재고관리',
+  LOGO_TEXT: 'KY',
+  SUBTITLE: '스마트공장 재고·물류관리 시스템',
+  FOOTER: 'Powered by Smart Factory ERP',
+  CONTACT: '',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycby7stu9vatQDhfoQZMB24QyuPw5TuCHaL-U63txFjUGYa38-DHoFT--DW_45IZBzfUE/exec',
+  WAREHOUSES: ['성서공장', '현풍공장'],
   USERS: [
-    { id: 'admin',  pw: 'admin1234', name: '관리자',  role: 'admin'  },
-    { id: 'staff1', pw: '1234',      name: '담당자1', role: 'staff'  },
-    { id: 'view1',  pw: '1234',      name: '조회자1', role: 'viewer' }
+    { id: 'admin',  pw: 'ky1234', name: '관리자',  role: 'admin'  },
+    { id: 'staff1', pw: '1234',   name: '담당자1', role: 'staff'  },
+    { id: 'view1',  pw: '1234',   name: '조회자1', role: 'viewer' }
   ],
-  SEED_ITEMS: [],
-
-  /* ★ 빌드 식별자 — sw.js의 BUILD_ID와 동일하게 유지 ★
-     배포 시 sw.js BUILD_ID와 함께 이 값도 교체하세요.       */
-  BUILD_ID:    '20260422_1450'
+  /* 기본 테마 컬러 */
+  THEME: {
+    primary:'#2563eb', accent:'#16a34a', amber:'#d97706',
+    sideTop:'#0f2747', sideBtm:'#1a3a6b', loginTop:'#0a1628'
+  },
+  SEED_ITEMS: [
+    { code: 'ITEM-001', name: '콤프레샤 필터',     spec: 'A형',      unit: 'EA',  safety: 10 },
+    { code: 'ITEM-002', name: '에어호스',           spec: '10M',      unit: 'EA',  safety: 8  },
+    { code: 'ITEM-003', name: '압력게이지',         spec: '100psi',   unit: 'EA',  safety: 5  },
+    { code: 'ITEM-004', name: '밸브세트',           spec: '표준',     unit: 'SET', safety: 4  },
+    { code: 'ITEM-005', name: '에어필터 엘리먼트', spec: '2인치',    unit: 'EA',  safety: 6  },
+    { code: 'ITEM-006', name: '윤활유',             spec: 'VG100 1L', unit: '통',  safety: 5  },
+    { code: 'ITEM-007', name: '드레인 밸브',        spec: '1/2인치',  unit: 'EA',  safety: 3  },
+    { code: 'ITEM-008', name: '연결 피팅',          spec: '1/4인치',  unit: 'EA',  safety: 20 }
+  ],
+  ACTION: {
+    SAVE_TX:'saveTransactionGet', SAVE_MASTER:'saveMasterItemGet',
+    DEL_MASTER:'deleteMasterItem', GET_MASTER:'getMasterItems',
+    GET_TX:'getTransactions', DASHBOARD:'dashboard', TEST:'test'
+  }
 };
 
 /* ─── localStorage ─── */
 var P = 'inv_' + CONFIG.CLIENT_ID + '_';
-var KEYS = { S: P+'settings', M: P+'master', T: P+'tx', SYNC: P+'syncTime',
-             VER: P+'build_ver' };
+var KEYS = { S: P+'settings', M: P+'master', T: P+'tx', SYNC: P+'syncTime', LOGO: P+'logoImg' };
 function lsGet(k,def){try{var v=localStorage.getItem(k);return v!==null?JSON.parse(v):def;}catch(e){return def;}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
-
-/* ══ localStorage 스키마 마이그레이션 ══
-   새 빌드 배포 시 구버전 설정값 충돌 방지.
-   BUILD_ID가 바뀌었으면 gasUrl / useGas 강제 초기화.
-   데이터(품목·이력)는 건드리지 않음.              */
-(function migrateLocalStorage() {
-  var savedVer = lsGet(KEYS.VER, '');
-  if(savedVer === CONFIG.BUILD_ID) return; /* 동일 버전 → 스킵 */
-
-  console.log('[MIGRATE] 구버전:', savedVer, '→ 신버전:', CONFIG.BUILD_ID);
-
-  var stored = lsGet(KEYS.S, null);
-  if(stored) {
-    /* gasUrl: 빈값이거나 이상 값이면 초기화 (CONFIG.GAS_URL로 덮어씀) */
-    var needsReset = false;
-    if(!stored.gasUrl || stored.gasUrl === '') needsReset = true;
-    /* useGas: CONFIG.GAS_URL 있으면 Y, 없으면 N으로 맞춤 */
-    stored.useGas = CONFIG.GAS_URL ? 'Y' : 'N';
-    if(needsReset) stored.gasUrl = '';  /* → getEffectiveGasUrl이 CONFIG 값 사용 */
-    lsSet(KEYS.S, stored);
-    console.log('[MIGRATE] gasUrl 리셋:', needsReset, '/ useGas:', stored.useGas);
-  }
-
-  /* 버전 기록 */
-  lsSet(KEYS.VER, CONFIG.BUILD_ID);
-})();
-/* ── GAS URL 결정 함수 (핵심 fallback 로직) ──
-   우선순위: ① localStorage 저장값 → ② CONFIG.GAS_URL 내장값
-   localStorage에 저장된 값이 없거나 빈값이면 CONFIG 값 사용.
-   결과적으로 새 기기에서도 CONFIG.GAS_URL이 있으면 바로 동작. */
-function getEffectiveGasUrl() {
-  var s = lsGet(KEYS.S, null);
-  if(s && s.gasUrl && s.gasUrl.trim()) return s.gasUrl.trim();
-  return CONFIG.GAS_URL;
-}
-function getEffectiveUseGas() {
-  var s = lsGet(KEYS.S, null);
-  /* localStorage에 명시적으로 저장된 값이 있으면 그것을 사용 */
-  if(s && s.useGas) return s.useGas;
-  /* 없으면 GAS_URL이 내장되어 있으면 자동으로 Y */
-  return CONFIG.GAS_URL ? 'Y' : 'N';
-}
-function getSettings(){
-  var stored = lsGet(KEYS.S, {});
-  return {
-    company:    stored.company    || CONFIG.COMPANY,
-    logo:       stored.logo       || CONFIG.LOGO_TEXT,
-    logoImg:    stored.logoImg    || '',
-    gasUrl:     getEffectiveGasUrl(),
-    useGas:     getEffectiveUseGas(),
-    defaultMgr: stored.defaultMgr || '',
-    defaultWh:  stored.defaultWh  || CONFIG.WAREHOUSES[0],
-    pageSize:   stored.pageSize   || '20',
-    themeC1:    stored.themeC1    || CONFIG.THEME_C1,
-    themeC2:    stored.themeC2    || CONFIG.THEME_C2
-  };
-}
+function getSettings(){return lsGet(KEYS.S,{
+  company:CONFIG.COMPANY, logo:CONFIG.LOGO_TEXT,
+  subtitle:CONFIG.SUBTITLE, footer:CONFIG.FOOTER, contact:CONFIG.CONTACT,
+  gasUrl:CONFIG.GAS_URL, defaultMgr:'',
+  defaultWh:CONFIG.WAREHOUSES[0], pageSize:'20', useGas:'Y',
+  theme:CONFIG.THEME
+});}
 function getMaster(){return lsGet(KEYS.M,[]);}
 function setMaster(v){lsSet(KEYS.M,v);}
 function getTx(){return lsGet(KEYS.T,[]);}
@@ -1163,11 +958,44 @@ function fmt(n){return Number(n||0).toLocaleString('ko-KR');}
 function fmtPrice(n){if(!n&&n!==0)return '';var v=Number(n);if(isNaN(v)||v===0)return '';return v.toLocaleString('ko-KR')+'원';}
 function isoD(v){return String(v||'').slice(0,10);}
 function nowISO(){var d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16);}
+function coName(){return (getSettings().company||CONFIG.COMPANY).replace(/[\\/:*?"<>|]/g,'');}
 var _toastTimer;
 function toast(msg){var el=document.getElementById('toast');if(!el)return;el.textContent=msg;el.classList.add('show');clearTimeout(_toastTimer);_toastTimer=setTimeout(function(){el.classList.remove('show');},2400);}
 function showLoad(on){var el=document.getElementById('loadingOverlay');if(el)el.classList.toggle('show',on);}
 function showAlert(title,msg){document.getElementById('alertTitle').textContent=title;document.getElementById('alertMsg').innerHTML=msg;document.getElementById('alertModal').classList.add('open');}
 function closeAlert(){document.getElementById('alertModal').classList.remove('open');}
+
+/* ─── GAS 상태칩 업데이트 ─── */
+function updateGasStatusChip(){
+  var s=getSettings();
+  var el=document.getElementById('gasStatusChip');
+  if(!el)return;
+  if(s.useGas==='Y'){
+    el.className='chip gas-ok';
+    el.textContent='🟢 Google Sheets 연동 중';
+  }else{
+    el.className='chip gas-local';
+    el.textContent='🟡 로컬 저장 모드';
+    el.title='로컬 저장 모드: 시트에 반영되지 않음';
+  }
+}
+
+/* CSS 변수 적용 */
+function applyCssVars(th){
+  var r=document.documentElement.style;
+  function dk(h,a){a=a||22;var n=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);return '#'+[Math.max(0,n-a),Math.max(0,g-a),Math.max(0,b-a)].map(function(v){return ('0'+v.toString(16)).slice(-2);}).join('');}
+  function lt(h){var n=parseInt(h.slice(1,3),16),g=parseInt(h.slice(3,5),16),b=parseInt(h.slice(5,7),16);var m=function(c){return Math.round(c+(255-c)*.88);};return '#'+[m(n),m(g),m(b)].map(function(v){return ('0'+v.toString(16)).slice(-2);}).join('');}
+  var p=th.primary||'#2563eb';
+  r.setProperty('--cp',p);
+  r.setProperty('--cp-d',dk(p));
+  r.setProperty('--cp-l',lt(p));
+  r.setProperty('--ca',th.accent||'#16a34a');
+  r.setProperty('--cam',th.amber||'#d97706');
+  r.setProperty('--cs-t',th.sideTop||'#0f2747');
+  r.setProperty('--cs-b',th.sideBtm||'#1a3a6b');
+  r.setProperty('--cl-t',th.loginTop||'#0a1628');
+  r.setProperty('--cl-b',th.sideBtm||'#1a3a6b');
+}
 
 /* ─── 로그인 ─── */
 
@@ -1214,23 +1042,27 @@ function kyRestoreSession() {
 /* 세션 자동복구: 페이지 로드 시 즉시 실행 (동기) */
 (function autoRestoreSession() {
   var user = kyRestoreSession();
-  if (!user) return;
+  if (!user) return; /* 세션 없으면 loginScreen 그대로 표시됨 */
+  /* 세션 있으면 바로 앱으로 진입 */
   G_USER = user;
   document.getElementById('loginScreen').style.display = 'none';
   document.getElementById('appWrap').style.display = 'flex';
   var txMgrEl = document.getElementById('txManager');
   if (txMgrEl) txMgrEl.value = user.name || '';
   try { applyBrand(); } catch(e) {}
+  try { initLogoPreview(); } catch(e) {}
   try { initWhSelects(); } catch(e) {}
   try { fillNow(); } catch(e) {}
   try { applySettingsToForm(true); } catch(e) {}
   try { document.getElementById('todayTxt').textContent =
     new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'}); } catch(e) {}
-  /* 로컬 데이터로 즉시 화면 채우기 */
-  try { renderDash(); renderHist(); renderStock(); renderShort(); renderMaster(); } catch(e) {}
-  toast(user.name + '님 자동 로그인');
-  /* GAS 초기 로딩 — 비동기 즉시 실행 */
-  initialLoad().catch(function(e){ console.error('[autoRestore] initialLoad 오류:', e); });
+  try { renderDash(); } catch(e) {}
+  try { renderHist(); } catch(e) {}
+  try { renderStock(); } catch(e) {}
+  try { renderShort(); } catch(e) {}
+  try { renderMaster(); } catch(e) {}
+  try { toast(user.name + '님 자동 로그인'); } catch(e) {}
+  try { startAutoSync(); } catch(e) {}
 })();
 
 function doLogin(){
@@ -1251,15 +1083,19 @@ function doLogin(){
   var txMgrEl=document.getElementById('txManager');
   if(txMgrEl)txMgrEl.value=user.name||'';
   try{applyBrand();}catch(e){}
+  try{initLogoPreview();}catch(e){}
   try{initWhSelects();}catch(e){}
   try{fillNow();}catch(e){}
   try{applySettingsToForm(true);}catch(e){}
+  try{var sb=document.getElementById('sync-banner');if(sb)sb.classList.add('show');}catch(e){}
   try{document.getElementById('todayTxt').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});}catch(e){}
-  /* 로컬 데이터로 즉시 화면 채우기 */
-  try{renderDash();renderHist();renderStock();renderShort();renderMaster();}catch(e){}
+  try{renderDash();}catch(e){}
+  try{renderHist();}catch(e){}
+  try{renderStock();}catch(e){}
+  try{renderShort();}catch(e){}
+  try{renderMaster();}catch(e){}
   toast(user.name+'님 로그인 완료');
-  /* GAS 초기 로딩 — 비동기 즉시 실행 */
-  initialLoad().catch(function(e){ console.error('[doLogin] initialLoad 오류:', e); });
+  try{ startAutoSync(); }catch(e){}
 }
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 document.getElementById('loginPw').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
@@ -1308,109 +1144,64 @@ document.querySelectorAll('.nav-btn').forEach(function(b){
 });
 
 /* ─── 브랜드 / 설정 ─── */
-function applyTheme(c1, c2) {
-  var r = document.documentElement.style;
-  r.setProperty('--c1', c1);
-  r.setProperty('--c2', c2);
-  r.setProperty('--c3', c2);
-  r.setProperty('--sidebar-from', c1);
-  r.setProperty('--sidebar-to', c2);
-  /* 로그인 배경도 즉시 반영 */
-  var ls = document.getElementById('loginScreen');
-  if (ls) ls.style.background = 'linear-gradient(135deg,' + c1 + ',' + c2 + ')';
-  /* 컬러피커 선택 표시 */
-  document.querySelectorAll('.color-swatch').forEach(function(sw) {
-    sw.classList.toggle('selected', sw.dataset.c1 === c1 && sw.dataset.c2 === c2);
-  });
-}
-
 function applyBrand(){
   var s=getSettings();
   var co=s.company||CONFIG.COMPANY;
   var lg=(s.logo||CONFIG.LOGO_TEXT).slice(0,3);
-  var c1=s.themeC1||CONFIG.THEME_C1;
-  var c2=s.themeC2||CONFIG.THEME_C2;
-  var logoImg=s.logoImg||'';
+  var sub=s.subtitle||CONFIG.SUBTITLE;
+  var foot=s.footer||CONFIG.FOOTER;
+  var th=s.theme||CONFIG.THEME;
 
-  applyTheme(c1, c2);
+  /* CSS 변수 적용 */
+  applyCssVars(th);
 
-  /* 텍스트 반영 */
-  document.getElementById('sName').textContent=co;
-  document.getElementById('compChip').textContent=co;
-  document.getElementById('loginTitle').textContent=co;
+  /* 이미지 로고 처리 */
+  var logoImg=null;
+  try{logoImg=localStorage.getItem(KEYS.LOGO);}catch(e){}
+  var elSLogo=document.getElementById('sLogo');
+  var elLLogo=document.getElementById('loginLogo');
+  if(logoImg){
+    var sTag='<img src="'+logoImg+'" style="max-height:32px;max-width:64px;object-fit:contain">';
+    var lTag='<img src="'+logoImg+'" style="max-height:56px;max-width:120px;object-fit:contain">';
+    if(elSLogo)elSLogo.innerHTML=sTag;
+    if(elLLogo)elLLogo.innerHTML=lTag;
+  }else{
+    if(elSLogo)elSLogo.textContent=lg;
+    if(elLLogo)elLLogo.textContent=lg;
+  }
+
+  /* 텍스트 브랜드 */
+  var elSName=document.getElementById('sName'); if(elSName)elSName.textContent=co;
+  var elSBrandSub=document.getElementById('sBrandSub'); if(elSBrandSub)elSBrandSub.textContent=sub;
+  var elCompChip=document.getElementById('compChip'); if(elCompChip)elCompChip.textContent=co;
+  var elLTitle=document.getElementById('loginTitle'); if(elLTitle)elLTitle.textContent=co;
+  var elLSub=document.getElementById('loginSub'); if(elLSub)elLSub.textContent=sub;
+  var elLFoot=document.getElementById('loginFooter'); if(elLFoot)elLFoot.textContent=foot;
   document.title=co+' — 재고·물류관리';
 
-  /* 로고 — 이미지 우선, 없으면 문자 */
-  function _applyLogo(elId, imgUrl, text) {
-    var el = document.getElementById(elId);
-    if(!el) return;
-    if(imgUrl) {
-      el.innerHTML = '<img src="'+imgUrl+'" alt="'+text+'" onerror="this.parentNode.textContent=\''+text+'\'">';
-    } else {
-      el.textContent = text;
-    }
-  }
-  _applyLogo('sLogo', logoImg, lg);
-  _applyLogo('loginLogo', logoImg, lg);
-  /* 드로어 로고도 반영 */
-  var dLogo = document.getElementById('drawerLogo');
-  if(dLogo) {
-    if(logoImg) dLogo.innerHTML = '<img src="'+logoImg+'" alt="'+lg+'" style="width:100%;height:100%;object-fit:contain;border-radius:10px">';
-    else dLogo.textContent = lg;
-  }
+  /* 설정 폼 동기화 */
+  function sv(id,v){var el=document.getElementById(id);if(el)el.value=v;}
+  sv('setCo',co);
+  sv('setLogo',s.logo||CONFIG.LOGO_TEXT);
+  sv('setSubtitle',sub);
+  sv('setFooter',foot);
+  sv('setContact',s.contact||CONFIG.CONTACT);
+  sv('setMgr',s.defaultMgr||'');
+  sv('setPgSz',s.pageSize||'20');
+  sv('setGasUrl',s.gasUrl||CONFIG.GAS_URL);
+  sv('setUseGas',s.useGas||'Y');
+  /* 테마 컬러 폼 */
+  sv('setClrPrimary',th.primary||'#2563eb');
+  sv('setClrAccent',th.accent||'#16a34a');
+  sv('setClrAmber',th.amber||'#d97706');
+  sv('setClrSideTop',th.sideTop||'#0f2747');
+  sv('setClrSideBtm',th.sideBtm||'#1a3a6b');
+  sv('setClrLoginTop',th.loginTop||'#0a1628');
 
-  /* 폼 반영 */
-  document.getElementById('setCo').value=co;
-  document.getElementById('setLogo').value=s.logo||CONFIG.LOGO_TEXT;
-  document.getElementById('setMgr').value=s.defaultMgr||'';
-  document.getElementById('setPgSz').value=s.pageSize||'20';
-  /* GAS URL은 admin 카드에만 있음 */
-  var gasUrlEl=document.getElementById('setGasUrl');
-  if(gasUrlEl) gasUrlEl.value=s.gasUrl||CONFIG.GAS_URL;
-  var useGasEl=document.getElementById('setUseGas');
-  if(useGasEl) useGasEl.value=s.useGas||getEffectiveUseGas();
-  var loImgEl=document.getElementById('setLogoImg');
-  if(loImgEl) loImgEl.value=logoImg;
-  if(logoImg) previewLogoImg(logoImg);
   var whOpts=CONFIG.WAREHOUSES.map(function(w){return '<option value="'+w+'">'+w+'</option>';}).join('');
-  document.getElementById('setWh').innerHTML=whOpts;
-  document.getElementById('setWh').value=s.defaultWh||CONFIG.WAREHOUSES[0];
-
-  /* 관리자 전용 카드 노출 제어 */
-  var isAdmin = G_USER && G_USER.role === 'admin';
-  var gasAdminCard = document.getElementById('gasAdminCard');
-  if(gasAdminCard) gasAdminCard.style.display = isAdmin ? 'block' : 'none';
-  var pwCard=document.getElementById('pwCard');
-  if(pwCard) pwCard.style.display = isAdmin ? 'block' : 'none';
+  var elSetWh=document.getElementById('setWh');if(elSetWh){elSetWh.innerHTML=whOpts;elSetWh.value=s.defaultWh||CONFIG.WAREHOUSES[0];}
+  updateGasStatusChip();
 }
-
-/* 로고 이미지 미리보기 */
-function previewLogoImg(url) {
-  var prev=document.getElementById('logoImgPreview');
-  var thumb=document.getElementById('logoImgThumb');
-  if(!prev||!thumb) return;
-  if(url && url.trim()) {
-    thumb.src=url.trim();
-    prev.style.display='flex';
-  } else {
-    prev.style.display='none';
-  }
-}
-function clearLogoImg() {
-  var el=document.getElementById('setLogoImg');
-  if(el) el.value='';
-  previewLogoImg('');
-}
-
-/* 컬러 스와치 클릭 이벤트 */
-document.addEventListener('DOMContentLoaded', function() {
-  document.querySelectorAll('.color-swatch').forEach(function(sw) {
-    sw.addEventListener('click', function() {
-      applyTheme(sw.dataset.c1, sw.dataset.c2);
-    });
-  });
-});
-
 function applySettingsToForm(silent){
   var s=getSettings();
   var mgr=document.getElementById('txManager'),twh=document.getElementById('txWh');
@@ -1418,62 +1209,101 @@ function applySettingsToForm(silent){
   if(twh)twh.value=s.defaultWh||CONFIG.WAREHOUSES[0];
   if(!silent)toast('기본값 반영 완료');
 }
-
+function gv(id,def){var el=document.getElementById(id);return el?(el.value.trim()||def||''):def||'';}
 function saveSettings(){
-  var selSw = document.querySelector('.color-swatch.selected');
-  var c1 = selSw ? selSw.dataset.c1 : (getSettings().themeC1 || CONFIG.THEME_C1);
-  var c2 = selSw ? selSw.dataset.c2 : (getSettings().themeC2 || CONFIG.THEME_C2);
-  var logoImgEl = document.getElementById('setLogoImg');
-  /* gasUrl — 관리자가 직접 입력한 값. 빈값이면 CONFIG 기본값 유지 */
-  var gasUrlInput = document.getElementById('setGasUrl');
-  var newGasUrl = gasUrlInput ? gasUrlInput.value.trim() : '';
-  var useGasInput = document.getElementById('setUseGas');
-  var newUseGas = useGasInput ? useGasInput.value : getEffectiveUseGas();
-  var stored = lsGet(KEYS.S, {});
-  lsSet(KEYS.S, Object.assign(stored, {
-    company:    document.getElementById('setCo').value.trim() || CONFIG.COMPANY,
-    logo:       document.getElementById('setLogo').value.trim() || CONFIG.LOGO_TEXT,
-    logoImg:    logoImgEl ? logoImgEl.value.trim() : '',
-    /* gasUrl: 빈값 입력 시 localStorage에서도 제거 → 자동으로 CONFIG 기본값 사용 */
-    gasUrl:     newGasUrl || '',
-    useGas:     newUseGas,
-    defaultMgr: document.getElementById('setMgr').value.trim(),
-    defaultWh:  document.getElementById('setWh').value,
-    pageSize:   document.getElementById('setPgSz').value,
-    themeC1:    c1,
-    themeC2:    c2
-  }));
+  var th={
+    primary:gv('setClrPrimary','#2563eb'),
+    accent:gv('setClrAccent','#16a34a'),
+    amber:gv('setClrAmber','#d97706'),
+    sideTop:gv('setClrSideTop','#0f2747'),
+    sideBtm:gv('setClrSideBtm','#1a3a6b'),
+    loginTop:gv('setClrLoginTop','#0a1628')
+  };
+  lsSet(KEYS.S,{
+    company:gv('setCo',CONFIG.COMPANY),
+    logo:gv('setLogo',CONFIG.LOGO_TEXT),
+    subtitle:gv('setSubtitle',CONFIG.SUBTITLE),
+    footer:gv('setFooter',CONFIG.FOOTER),
+    contact:gv('setContact',''),
+    gasUrl:gv('setGasUrl',CONFIG.GAS_URL),
+    defaultMgr:gv('setMgr',''),
+    defaultWh:gv('setWh',CONFIG.WAREHOUSES[0]),
+    pageSize:gv('setPgSz','20'),
+    useGas:gv('setUseGas','Y'),
+    theme:th
+  });
   applyBrand();
-  toast('✅ 설정 저장 완료');
-  try{ startAutoSync(); }catch(e){}
+  var savedUseGas=gv('setUseGas','Y');
+  var savedUrl=gv('setGasUrl',CONFIG.GAS_URL);
+  var modeLabel=savedUseGas==='Y'?'Google Sheets 저장':'로컬만 사용';
+  var urlShort=savedUrl?savedUrl.replace('https://script.google.com/macros/s/','…/s/').slice(0,40)+'…':'미설정';
+  toast('✅ 설정 저장 완료 | 저장방식: '+modeLabel+' | URL: '+urlShort);
+  try{startAutoSync();}catch(e){}
+}
+/* \u2500\u2500\u2500 \ucf5c\ub7ec picker \ud5ec\ud37c \u2500\u2500\u2500 */
+function syncColor(colorId,txtId){var el=document.getElementById(colorId),el2=document.getElementById(txtId);if(el&&el2)el2.value=el.value;}
+function syncColorTxt(txtId,colorId){var el=document.getElementById(txtId),el2=document.getElementById(colorId);if(!el||!el2)return;var v=el.value;if(/^#[0-9a-fA-F]{6}$/.test(v))el2.value=v;}
+
+/* \u2500\u2500\u2500 \uc774\ubbf8\uc9c0 \ub85c\uace0 \u2500\u2500\u2500 */
+function onLogoUpload(e){
+  var file=e.target.files&&e.target.files[0];
+  if(!file)return;
+  if(file.size>512*1024){toast('\ub85c\uace0 \ud30c\uc77c\uc740 512KB \uc774\ud558\ub85c \uc0ac\uc6a9\ud558\uc138\uc694');return;}
+  var reader=new FileReader();
+  reader.onload=function(ev){
+    try{localStorage.setItem(KEYS.LOGO,ev.target.result);}catch(ex){toast('\ub85c\uace0 \uc800\uc7a5 \uc2e4\ud328(\uc6a9\ub7c9 \ucd08\uacfc)');}
+    var prev=document.getElementById('logoPreviewImg');
+    var hint=document.getElementById('logoUploadHint');
+    if(prev){prev.src=ev.target.result;prev.style.display='block';}
+    if(hint)hint.style.display='none';
+    applyBrand();toast('\ub85c\uace0 \uc774\ubbf8\uc9c0 \uc801\uc6a9 \uc644\ub8cc');
+  };
+  reader.readAsDataURL(file);
+}
+function removeLogoImg(){
+  try{localStorage.removeItem(KEYS.LOGO);}catch(e){}
+  var prev=document.getElementById('logoPreviewImg');
+  var hint=document.getElementById('logoUploadHint');
+  var inp=document.getElementById('logoFileInput');
+  if(prev){prev.src='';prev.style.display='none';}
+  if(hint)hint.style.display='';
+  if(inp)inp.value='';
+  applyBrand();toast('\ub85c\uace0 \uc774\ubbf8\uc9c0 \uc81c\uac70');
+}
+function initLogoPreview(){
+  var img=null;try{img=localStorage.getItem(KEYS.LOGO);}catch(e){}
+  if(!img)return;
+  var prev=document.getElementById('logoPreviewImg');
+  var hint=document.getElementById('logoUploadHint');
+  if(prev){prev.src=img;prev.style.display='block';}
+  if(hint)hint.style.display='none';
 }
 
-/* ── 비밀번호 변경 ── */
-function changeMyPassword() {
-  if(!G_USER) return;
-  var cur=document.getElementById('pwCurrent').value;
-  var nw=document.getElementById('pwNew').value;
-  var cf=document.getElementById('pwConfirm').value;
-  if(!cur||!nw||!cf){toast('모든 항목을 입력하세요');return;}
-  if(G_USER.pw!==cur){showAlert('❌ 오류','현재 비밀번호가 일치하지 않습니다.');return;}
-  if(nw.length<4){showAlert('❌ 오류','새 비밀번호는 4자 이상이어야 합니다.');return;}
-  if(nw!==cf){showAlert('❌ 오류','새 비밀번호가 일치하지 않습니다.');return;}
-  /* CONFIG.USERS + localStorage 동시 업데이트 */
-  var users=kyGetUsers();
-  for(var i=0;i<users.length;i++){
-    if(users[i].id===G_USER.id){users[i].pw=nw;break;}
-  }
-  kySetUsers(users);
-  G_USER.pw=nw;
-  /* CONFIG도 업데이트 (세션 내) */
-  for(var j=0;j<CONFIG.USERS.length;j++){
-    if(CONFIG.USERS[j].id===G_USER.id){CONFIG.USERS[j].pw=nw;break;}
-  }
-  document.getElementById('pwCurrent').value='';
-  document.getElementById('pwNew').value='';
-  document.getElementById('pwConfirm').value='';
-  toast('✅ 비밀번호가 변경되었습니다');
+/* \u2500\u2500\u2500 \ud14c\ub9c8 \uc2e4\uc2dc\uac04 \ubbf8\ub9ac\ubcf4\uae30 \u2500\u2500\u2500 */
+function previewTheme(){
+  var th={
+    primary:document.getElementById('setClrPrimary').value,
+    accent:document.getElementById('setClrAccent').value,
+    amber:document.getElementById('setClrAmber').value,
+    sideTop:document.getElementById('setClrSideTop').value,
+    sideBtm:document.getElementById('setClrSideBtm').value,
+    loginTop:document.getElementById('setClrLoginTop').value
+  };
+  applyCssVars(th);
 }
+function resetTheme(){
+  var th=CONFIG.THEME;
+  function sv(id,v){var el=document.getElementById(id);if(el)el.value=v;}
+  function sv2(id,v){var el=document.getElementById(id);if(el)el.value=v;}
+  sv('setClrPrimary',th.primary); sv2('setClrPrimaryTxt',th.primary);
+  sv('setClrAccent',th.accent);   sv2('setClrAccentTxt',th.accent);
+  sv('setClrAmber',th.amber);     sv2('setClrAmberTxt',th.amber);
+  sv('setClrSideTop',th.sideTop); sv2('setClrSideTopTxt',th.sideTop);
+  sv('setClrSideBtm',th.sideBtm); sv2('setClrSideBtmTxt',th.sideBtm);
+  sv('setClrLoginTop',th.loginTop);sv2('setClrLoginTopTxt',th.loginTop);
+  applyCssVars(th);toast('\uae30\ubcf8 \ud14c\ub9c8\ub85c \ubcf5\uc6d0\ub428');
+}
+
 function initWhSelects(){
   var opts=CONFIG.WAREHOUSES.map(function(w){return '<option value="'+w+'">'+w+'</option>';}).join('');
   document.getElementById('txWh').innerHTML=opts;
@@ -1668,8 +1498,8 @@ async function saveTx(){
     if(item){var whs=item[row.warehouse]!=null?item[row.warehouse]:0;if(row.qty>whs){showAlert('⚠️ 출고 수량 초과','['+row.name+'] '+row.warehouse+' 현재고: <strong>'+fmt(whs)+'</strong><br>출고 요청: <strong style="color:#dc2626">'+fmt(row.qty)+'</strong><br><br>현재고보다 많은 수량은 출고할 수 없습니다.');return;}}
   }
   var s=getSettings();
-  if(_getActiveGasUrl()){
-    try{showLoad(true);await gasGet('saveTransactionGet',row);var arr=getTx();arr.push(row);setTx(arr);await syncTxSilent();}
+  if(s.useGas==='Y'){
+    try{showLoad(true);await gasGet(CONFIG.ACTION.SAVE_TX,row);var arr=getTx();arr.push(row);setTx(arr);await syncTxSilent();}
     catch(e){showAlert('❌ GAS 저장 실패','<code>'+e.message+'</code>');showLoad(false);return;}
     finally{showLoad(false);}
   }else{var arr=getTx();arr.push(row);setTx(arr);}
@@ -1898,8 +1728,7 @@ function exportHistCSV() {
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a');
   a.href   = url;
-  var coName = (getSettings().company || CONFIG.COMPANY).replace(/\s/g,'_');
-  a.download = coName + '_입출고이력_' + isoD(new Date().toISOString()) + '.csv';
+  a.download = coName()+'_입출고이력_' + isoD(new Date().toISOString()) + '.csv';
   a.click();
   URL.revokeObjectURL(url);
   toast('✅ CSV 다운로드 완료 (' + rows.length + '건)');
@@ -1967,8 +1796,7 @@ function _doXLSX(rows) {
     }
 
     /* 파일명 */
-    var coName2 = (getSettings().company || CONFIG.COMPANY).replace(/\s/g,'_');
-    var fname  = coName2 + '_입출고이력_' + isoD(new Date().toISOString()) + '.xlsx';
+    var fname  = coName()+'_입출고이력_' + isoD(new Date().toISOString()) + '.xlsx';
     var wb     = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '입출고이력');
 
@@ -2016,8 +1844,7 @@ function exportStockCSV(){
   var hdr='품목코드,품목명,규격,단위,전체현재고,'+WH.join(',')+',안전재고,상태\n';
   var body=rows.map(function(r){return[r.code,r.name,r.spec||'',r.unit||'EA',r.total].concat(WH.map(function(w){return r[w]||0;})).concat([r.safety,r.total<=r.safety?'부족':'정상']).map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"';}).join(',');}).join('\n');
   var blob=new Blob([bom+hdr+body],{type:'text/csv;charset=utf-8'});
-  var coName3=(getSettings().company||CONFIG.COMPANY).replace(/\s/g,'_');
-  var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=coName3+'_재고_'+isoD(new Date().toISOString())+'.csv';a.click();URL.revokeObjectURL(url);toast('CSV 다운로드 완료');
+  var url=URL.createObjectURL(blob);var a=document.createElement('a');a.href=url;a.download=coName()+'_재고_'+isoD(new Date().toISOString())+'.csv';a.click();URL.revokeObjectURL(url);toast('CSV 다운로드 완료');
 }
 
 /* ─── 부족 재고 ─── */
@@ -2034,20 +1861,18 @@ function renderShort(){
 async function saveMaster(){
   var row={code:document.getElementById('mCode').value.trim(),name:document.getElementById('mName').value.trim(),spec:document.getElementById('mSpec').value.trim(),unit:document.getElementById('mUnit').value.trim()||'EA',safety:Number(document.getElementById('mSafety').value||0)};
   if(!row.code||!row.name){toast('품목코드와 품목명을 입력하세요');return;}
-  var idx=document.getElementById('mIdx').value;
-  var hasGas=!!_getActiveGasUrl();
-  if(hasGas){try{showLoad(true);await gasGet('saveMasterItemGet',row);await syncMasterSilent();}catch(e){showAlert('❌ 품목 저장 실패','<code>'+e.message+'</code>');showLoad(false);return;}finally{showLoad(false);}}
+  var idx=document.getElementById('mIdx').value,s=getSettings();
+  if(s.useGas==='Y'){try{showLoad(true);await gasGet(CONFIG.ACTION.SAVE_MASTER,row);await syncMasterSilent();}catch(e){showAlert('❌ 품목 저장 실패','<code>'+e.message+'</code>');showLoad(false);return;}finally{showLoad(false);}}
   else{var arr=getMaster();if(idx==='')arr.push(row);else arr[Number(idx)]=row;setMaster(arr);}
   resetMasterForm();renderMaster();renderStock();renderShort();
-  toast(hasGas?'✅ 품목 저장 완료 (시트 반영)':'✅ 품목 저장 완료 (로컬)');
+  toast(s.useGas==='Y'?'✅ 품목 저장 완료 (시트 반영)':'✅ 품목 저장 완료 (로컬)');
 }
 function editMaster(i){var r=getMaster()[i];document.getElementById('mIdx').value=i;document.getElementById('mCode').value=r.code;document.getElementById('mName').value=r.name;document.getElementById('mSpec').value=r.spec||'';document.getElementById('mUnit').value=r.unit||'EA';document.getElementById('mSafety').value=r.safety||0;}
 async function delMaster(i){
   var arr=getMaster(),item=arr[i];if(!item)return;
-  var hasGas=!!_getActiveGasUrl();
-  var msg=hasGas?'['+item.code+'] '+item.name+'\n\n※ Google Sheets에서도 즉시 삭제됩니다.':'['+item.code+'] '+item.name+'\n\n로컬에서 삭제합니다.';
+  var s=getSettings(),msg=s.useGas==='Y'?'['+item.code+'] '+item.name+'\n\n※ Google Sheets에서도 즉시 삭제됩니다.':'['+item.code+'] '+item.name+'\n\n로컬에서 삭제합니다.';
   if(!confirm(msg))return;
-  if(hasGas){try{showLoad(true);await gasGet('deleteMasterItem',{code:item.code,name:item.name});arr.splice(i,1);setMaster(arr);await syncMasterSilent();}catch(e){showAlert('❌ 시트 삭제 실패','<code>'+e.message+'</code>');showLoad(false);return;}finally{showLoad(false);}}
+  if(s.useGas==='Y'){try{showLoad(true);await gasGet(CONFIG.ACTION.DEL_MASTER,{code:item.code,name:item.name});arr.splice(i,1);setMaster(arr);await syncMasterSilent();}catch(e){showAlert('❌ 시트 삭제 실패','<code>'+e.message+'</code>');showLoad(false);return;}finally{showLoad(false);}}
   else{arr.splice(i,1);setMaster(arr);}
   renderMaster();renderStock();renderShort();toast('✅ 품목 삭제 완료');
 }
@@ -2086,339 +1911,53 @@ function renderStats(){
     :'<tr><td colspan="8" style="text-align:center;color:#94a3b8;padding:20px">데이터 없음</td></tr>';
 }
 
-/* ══════════════════════════════════════════════════════
-   GAS 통신 핵심 함수 (GitHub Pages CORS 완전 대응)
-   ─────────────────────────────────────────────────────
-   Apps Script URL은 호출 시 302 리다이렉트 발생:
-   script.google.com → script.googleusercontent.com
-   브라우저 fetch는 기본적으로 리다이렉트를 따라가나
-   CORS 헤더가 리다이렉트 목적지에서만 반환되므로
-   아래 순서로 처리:
-   1) fetch + redirect:follow + text()로 수신
-   2) 수신 text가 JSON인지 파싱 시도
-   3) 실패 시 JSONP 방식으로 폴백
-   ══════════════════════════════════════════════════════ */
-
-/* ── 공통 쿼리스트링 빌더 ── */
-function _buildQS(params) {
-  return Object.keys(params)
-    .map(function(k){ return encodeURIComponent(k)+'='+encodeURIComponent(params[k]!=null?params[k]:''); })
-    .join('&');
-}
-
-/* ── JSON 안전 파싱 ── */
-function _safeJSON(text) {
-  var t = (text||'').trim();
-  /* Apps Script가 간혹 )]}' 프리픽스 붙이는 경우 제거 */
-  if(t.startsWith(')]}\'')) t = t.slice(4);
-  /* HTML 응답이면 즉시 오류 */
-  if(t.startsWith('<')) throw new Error('HTML 응답 수신 — GAS URL을 확인해 주세요 (redirect 미처리)');
-  return JSON.parse(t);
-}
-
-/* ── fetch 1차 시도 ── */
-function _fetchGAS(url, qs) {
-  return fetch(url + '?' + qs, {
-    method: 'GET',
-    mode: 'cors',
-    redirect: 'follow',
-    cache: 'no-store',
-    headers: { 'Accept': 'application/json, text/plain, */*' }
-  })
-  .then(function(res) {
-    /* 상태코드 확인 */
-    if(!res.ok && res.status !== 0) throw new Error('HTTP ' + res.status);
-    return res.text();
-  })
-  .then(function(text) {
-    return _safeJSON(text);
-  });
-}
-
-/* ── JSONP 폴백 ── */
-function _jsonpGAS(url, qs) {
-  return new Promise(function(resolve, reject) {
-    var cbName = '_gasCB_' + Date.now();
-    var timer = setTimeout(function(){
-      delete window[cbName];
-      var s = document.getElementById(cbName);
-      if(s) s.parentNode.removeChild(s);
-      reject(new Error('JSONP 타임아웃 (15초)'));
-    }, 15000);
-
-    window[cbName] = function(data) {
-      clearTimeout(timer);
-      delete window[cbName];
-      var s = document.getElementById(cbName);
-      if(s) s.parentNode.removeChild(s);
-      if(data && data.success === false) reject(new Error(data.message || 'GAS 오류'));
-      else resolve(data);
-    };
-
-    var script = document.createElement('script');
-    script.id = cbName;
-    script.src = url + '?' + qs + '&callback=' + cbName;
-    script.onerror = function(){
-      clearTimeout(timer);
-      delete window[cbName];
-      reject(new Error('JSONP 로드 실패'));
-    };
-    document.head.appendChild(script);
-  });
-}
-
-/* ── 현재 유효한 GAS URL 반환 (공통)
-   1순위: 설정 입력칸 현재 value
-   2순위: localStorage 저장값
-   3순위: CONFIG.GAS_URL 내장값        */
-function _getActiveGasUrl() {
-  var el = document.getElementById('setGasUrl');
-  if(el && el.value.trim()) return el.value.trim();
-  return getEffectiveGasUrl() || CONFIG.GAS_URL;
-}
-
-/* ══════════════════════════════════════════════════
-   초기 데이터 로딩 — 로그인 직후 즉시 실행
-   우선순위: 입력칸 → localStorage → CONFIG.GAS_URL
-   결과에 따라 대시보드 배너·상태칩 업데이트
-══════════════════════════════════════════════════ */
-
-/* 배너 상태 업데이트 헬퍼 */
-function _setSyncBanner(state, title, sub, btnLabel, btnAction) {
-  var banner = document.getElementById('sync-banner');
-  var ico    = document.getElementById('syncBannerIco');
-  var ttl    = document.getElementById('syncBannerTitle');
-  var sb     = document.getElementById('syncBannerSub');
-  var btn    = document.getElementById('syncBannerBtn');
-  if(!banner) return;
-
-  var styles = {
-    loading:  { bg:'#f0f9ff', border:'#bae6fd', titleColor:'#0369a1', subColor:'#0284c7',  ico:'⏳' },
-    ok:       { bg:'#f0fdf4', border:'#86efac', titleColor:'#15803d', subColor:'#16a34a',  ico:'✅' },
-    error:    { bg:'#fff7ed', border:'#fed7aa', titleColor:'#c2410c', subColor:'#ea580c',  ico:'⚠️' },
-    nourl:    { bg:'#fefce8', border:'#fde047', titleColor:'#854d0e', subColor:'#a16207',  ico:'📡' },
-  };
-  var st = styles[state] || styles.nourl;
-
-  banner.style.cssText = 'display:flex;background:'+st.bg+';border:1.5px solid '+st.border+
-    ';border-radius:12px;padding:12px 16px;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px';
-  if(ico) ico.textContent = st.ico;
-  if(ttl) { ttl.textContent = title; ttl.style.color = st.titleColor; }
-  if(sb)  { sb.textContent  = sub;   sb.style.color  = st.subColor; }
-  if(btn) { btn.textContent = btnLabel || '🔄 동기화';
-            btn.onclick = btnAction || function(){ manualSync(); }; }
-}
-
-/* 상태칩 업데이트 */
-function _setSyncChip(state, label) {
-  var chip = document.getElementById('syncStateChip');
-  if(!chip) return;
-  chip.textContent = label;
-  chip.className = 'chip ' + (state === 'ok' ? 'green' : state === 'error' ? 'red' : 'gray');
-}
-
-/* GAS URL 칩 업데이트 */
-function _setGasChip(url) {
-  var chip = document.getElementById('gasUrlChip');
-  if(!chip) return;
-  if(!url) { chip.textContent = 'GAS: 미설정'; chip.className = 'chip red'; return; }
-  var short = url.length > 30 ? url.slice(0,15)+'...'+url.slice(-10) : url;
-  chip.textContent = 'GAS: ' + short;
-  chip.className = 'chip blue';
-}
-
-/* syncTimeChip2 업데이트 */
-function _setSyncTime() {
-  var t = lsGet(KEYS.SYNC,'');
-  var chip = document.getElementById('syncTimeChip2');
-  if(!chip) return;
-  chip.textContent = t
-    ? '동기화: ' + new Date(t).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})
-    : '동기화: 없음';
-}
-
-/* ── 로그인 직후 초기 데이터 로딩 (핵심) ── */
-async function initialLoad() {
-  var url = _getActiveGasUrl();
-
-  /* URL 결정 로그 */
-  var inputEl = document.getElementById('setGasUrl');
-  var fromInput  = inputEl ? inputEl.value.trim() : '';
-  var fromLS     = getEffectiveGasUrl();
-  var fromConfig = CONFIG.GAS_URL;
-  console.log('[GAS] URL 결정 과정:');
-  console.log('  입력칸:', fromInput  || '(없음)');
-  console.log('  localStorage:', fromLS    || '(없음)');
-  console.log('  CONFIG:', fromConfig || '(없음)');
-  console.log('  최종 선택:', url      || '(없음)');
-
-  _setGasChip(url);
-
-  if(!url) {
-    /* URL 없음 → 로컬 모드 */
-    _setSyncBanner('nourl',
-      '미연결 — 로컬 데이터 표시 중',
-      'GAS URL이 설정되지 않았습니다. 설정 탭에서 URL을 입력하세요.',
-      '⚙️ 설정', function(){ goTab('settings'); }
-    );
-    _setSyncChip('gray', '🔌 로컬 모드');
-    console.log('[GAS] URL 없음 → 로컬 모드로 동작');
-    return;
-  }
-
-  /* URL 있음 → 즉시 fetch 시도 */
-  _setSyncBanner('loading', '데이터 불러오는 중...', 'Google Sheets에서 최신 데이터를 가져옵니다.', '⏳ 로딩 중');
-  _setSyncChip('gray', '⏳ 연결 중...');
-
-  try {
-    /* 품목 + 이력 병렬 로딩 */
-    var results = await Promise.allSettled([
-      gasGet('getMasterItems'),
-      gasGet('getTransactions')
-    ]);
-
-    var masterResult = results[0];
-    var txResult     = results[1];
-    var masterOk = false, txOk = false;
-
-    if(masterResult.status === 'fulfilled' && masterResult.value.success && masterResult.value.items) {
-      setMaster(masterResult.value.items);
-      masterOk = true;
-      console.log('[GAS] 품목 로딩 성공:', masterResult.value.items.length, '건');
-    } else {
-      console.warn('[GAS] 품목 로딩 실패:', masterResult.reason || masterResult.value);
-    }
-
-    if(txResult.status === 'fulfilled' && txResult.value.success && txResult.value.transactions) {
-      setTx(txResult.value.transactions);
-      txOk = true;
-      console.log('[GAS] 이력 로딩 성공:', txResult.value.transactions.length, '건');
-    } else {
-      console.warn('[GAS] 이력 로딩 실패:', txResult.reason || txResult.value);
-    }
-
-    lsSet(KEYS.SYNC, new Date().toISOString());
-    _setSyncTime();
-
-    if(masterOk || txOk) {
-      var itemCount = getMaster().length;
-      var txCount   = getTx().length;
-      _setSyncBanner('ok',
-        '✅ 연결 정상 — Google Sheets 데이터 로드 완료',
-        '품목 ' + itemCount + '건 · 이력 ' + txCount + '건 · ' +
-        new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) + ' 동기화',
-        '🔄 새로고침', function(){ manualSync(); }
-      );
-      _setSyncChip('ok', '✅ 연결 정상');
-      /* 화면 즉시 갱신 */
-      renderDash(); renderHist(); renderStock(); renderShort(); renderMaster();
-      /* 자동 동기화 타이머 시작 */
-      startAutoSync();
-    } else {
-      throw new Error('품목/이력 모두 로딩 실패');
-    }
-
-  } catch(err) {
-    console.error('[GAS] 초기 로딩 실패:', err.message);
-    _setSyncBanner('error',
-      '⚠️ Google Sheets 연결 실패 — 로컬 데이터 표시 중',
-      '오류: ' + err.message + ' | 로컬에 저장된 데이터를 표시합니다.',
-      '🔄 재시도', function(){ manualSync(); }
-    );
-    _setSyncChip('error', '❌ 연결 실패');
-    /* 실패해도 로컬 데이터로 화면 갱신 */
-    renderDash(); renderHist(); renderStock(); renderShort(); renderMaster();
-  }
-}
-
-/* ── 수동 동기화 (배너 버튼) ── */
-async function manualSync() {
-  var url = _getActiveGasUrl();
-  if(!url) { goTab('settings'); return; }
-  _setSyncBanner('loading', '동기화 중...', 'Google Sheets에서 데이터를 가져옵니다.', '⏳');
-  _setSyncChip('gray', '⏳ 동기화 중...');
-  await initialLoad();
-}
-
-/* ── 메인 GAS 호출 함수 (fetch → JSONP 자동 폴백) ── */
-function gasGet(action, params) {
-  var url = _getActiveGasUrl();
-  if(!url) return Promise.reject(new Error('GAS URL이 설정되지 않았습니다'));
-
-  var p = Object.assign({ action: action }, params || {});
-  var qs = _buildQS(p);
-
-  return _fetchGAS(url, qs).catch(function(fetchErr) {
-    console.warn('[GAS] fetch 실패, JSONP 폴백 시도:', fetchErr.message);
-    return _jsonpGAS(url, qs);
+/* ─── GAS 통신 ─── */
+function gasGet(action,params){
+  return new Promise(function(resolve,reject){
+    var s=getSettings();
+    var url=s.gasUrl||CONFIG.GAS_URL;
+    if(!url){reject(new Error('GAS URL이 설정되지 않았습니다'));return;}
+    var p=Object.assign({action:action},params||{});
+    var qs=Object.keys(p).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(p[k]!=null?p[k]:'');}).join('&');
+    var img=new Image();
+    img.onerror=function(){reject(new Error('네트워크 오류'));};
+    fetch(url+'?'+qs)
+      .then(function(r){return r.json();})
+      .then(function(data){if(data.success===false)reject(new Error(data.message||'GAS 오류'));else resolve(data);})
+      .catch(function(e){reject(e);});
   });
 }
 
 /* ─── 동기화 ─── */
 async function testGas(){
-  /* ── URL 결정: 1순위 입력칸 → 2순위 localStorage → 3순위 CONFIG ── */
-  var inputEl = document.getElementById('setGasUrl');
-  var urlFromInput = inputEl ? inputEl.value.trim() : '';
-  var urlFromStorage = getEffectiveGasUrl();          /* localStorage or CONFIG */
-  var url = urlFromInput || urlFromStorage || CONFIG.GAS_URL;
-
-  if(!url){
-    showAlert('URL 없음',
-      'Apps Script URL을 입력해 주세요.<br>' +
-      '<small style="color:#64748b">설정 → Apps Script 연동 → URL 입력란</small>');
-    return;
-  }
-
-  /* 입력칸에 값이 있지만 아직 저장 안 된 경우 → 자동으로 localStorage에 저장 */
-  if(urlFromInput && urlFromInput !== urlFromStorage){
-    var stored = lsGet(KEYS.S, {});
-    stored.gasUrl  = urlFromInput;
-    stored.useGas  = 'Y';
-    lsSet(KEYS.S, stored);
-    /* 입력칸도 동일하게 유지 */
-    if(inputEl) inputEl.value = urlFromInput;
-    var useGasEl = document.getElementById('setUseGas');
-    if(useGasEl) useGasEl.value = 'Y';
-  }
-
+  var s=getSettings();
   try{
     showLoad(true);
-    var connEl = document.getElementById('connState');
-    if(connEl){ connEl.className='chip gray'; connEl.textContent='⏳ 연결 중...'; }
-
-    var data;
-    try {
-      data = await _fetchGAS(url, 'action=test');
-    } catch(fetchErr) {
-      console.warn('[testGas] fetch 실패, JSONP 폴백:', fetchErr.message);
-      data = await _jsonpGAS(url, 'action=test');
-    }
-
-    if(data && data.success){
-      if(connEl){ connEl.className='chip green'; connEl.textContent='✅ 연결 정상'; }
-      toast('✅ GAS 연결 성공: '+(data.message||'정상'));
-      var banner = document.getElementById('sync-banner');
-      if(banner) banner.classList.remove('show');
+    var url=s.gasUrl||CONFIG.GAS_URL;
+    var res=await fetch(url+'?action=test');
+    var data=await res.json();
+    if(data.success){
+      document.getElementById('connState').className='chip green';
+      document.getElementById('connState').textContent='✅ 연결 정상';
+      /* 연결 성공 시 useGas:'Y' 자동 저장 */
+      var cur=getSettings();
+      if(cur.useGas!=='Y'){
+        cur.useGas='Y';
+        lsSet(KEYS.S,cur);
+        var elUG=document.getElementById('setUseGas');
+        if(elUG)elUG.value='Y';
+        updateGasStatusChip();
+        toast('GAS 연결 성공 → 저장 방식이 Google Sheets로 자동 전환되었습니다.');
+      }else{
+        toast('GAS 연결 성공: '+data.message);
+      }
       startAutoSync();
-    } else {
-      throw new Error((data && data.message) || 'GAS 응답 오류');
-    }
-
-  } catch(e){
-    var connEl2 = document.getElementById('connState');
-    if(connEl2){ connEl2.className='chip red'; connEl2.textContent='❌ 연결 실패'; }
-    showAlert('❌ 연결 실패',
-      e.message + '<br><br>' +
-      '<small style="color:#64748b">' +
-      '• 테스트 URL: <code style="font-size:10px;word-break:break-all">' + url + '</code><br><br>' +
-      '• 배포 권한: <b>모든 사용자 (익명 포함)</b><br>' +
-      '• 배포 유형: <b>웹 앱</b><br>' +
-      '• URL이 <code>/exec</code>로 끝나는지 확인' +
-      '</small>'
-    );
-  } finally {
-    showLoad(false);
-  }
+    }else throw new Error(data.message);
+  }catch(e){
+    document.getElementById('connState').className='chip red';
+    document.getElementById('connState').textContent='❌ 연결 실패';
+    showAlert('연결 실패',e.message);
+  }finally{showLoad(false);}
 }
 
 function updateSyncChip(){
@@ -2427,21 +1966,29 @@ function updateSyncChip(){
 }
 
 async function syncMasterSilent(){
-  /* URL이 있으면 무조건 동기화 시도 (useGas 저장값 관계없이) */
-  if(!_getActiveGasUrl()) return;
-  var data = await gasGet('getMasterItems');
-  if(data.success && data.items){ setMaster(data.items); }
-  lsSet(KEYS.SYNC, new Date().toISOString());
+  var s=getSettings();
+  if(s.useGas!=='Y') return;
+  var res=await fetch((s.gasUrl||CONFIG.GAS_URL)+'?action=getMasterItems');
+  var data=await res.json();
+  if(data.success&&data.items){ setMaster(data.items); }
+  lsSet(KEYS.SYNC,new Date().toISOString());
 }
 
 async function syncTxSilent(){
-  if(!_getActiveGasUrl()) return;
-  var data = await gasGet('getTransactions');
-  if(data.success && data.transactions){ setTx(data.transactions); }
-  lsSet(KEYS.SYNC, new Date().toISOString());
+  var s=getSettings();
+  if(s.useGas!=='Y') return;
+  var res=await fetch((s.gasUrl||CONFIG.GAS_URL)+'?action=getTransactions');
+  var data=await res.json();
+  if(data.success&&data.transactions){ setTx(data.transactions); }
+  lsSet(KEYS.SYNC,new Date().toISOString());
 }
 
 async function syncMasterNow(){
+  var s=getSettings();
+  if(s.useGas!=='Y'){
+    showAlert('⚠️ 저장 방식 확인 필요','현재 저장 방식이 <b>로컬만 사용</b>입니다.<br>설정에서 <b>Google Sheets 저장</b>으로 변경 후 저장 버튼을 눌러 주세요.');
+    return;
+  }
   try{
     showLoad(true);
     await syncMasterSilent();
@@ -2458,6 +2005,11 @@ async function syncMasterNow(){
 }
 
 async function syncTxNow(){
+  var s=getSettings();
+  if(s.useGas!=='Y'){
+    showAlert('⚠️ 저장 방식 확인 필요','현재 저장 방식이 <b>로컬만 사용</b>입니다.<br>설정에서 <b>Google Sheets 저장</b>으로 변경 후 저장 버튼을 눌러 주세요.');
+    return;
+  }
   try{
     showLoad(true);
     await syncTxSilent();
@@ -2475,9 +2027,10 @@ async function syncTxNow(){
 }
 
 async function doRefreshAll(){
-  if(!_getActiveGasUrl()){
+  var s=getSettings();
+  if(s.useGas!=='Y'){
+    showAlert('⚠️ 저장 방식 확인 필요','현재 저장 방식이 <b>로컬만 사용</b>입니다.<br>설정에서 <b>Google Sheets 저장</b>으로 변경 후 저장 버튼을 눌러 주세요.');
     renderDash();renderHist();renderStock();renderShort();renderMaster();
-    toast('로컬 데이터 새로고침 완료');
     return;
   }
   try{
@@ -2503,36 +2056,55 @@ var _autoSyncTimer = null;
 var _autoSyncBusy = false;
 
 async function autoSyncAllSilent(){
-  if(!_getActiveGasUrl()) return;   /* URL 없으면 동기화 안 함 */
+  var beforeCount = getTx().length;
+
+  var s = getSettings();
+  if(!s || s.useGas !== 'Y') return;
   if(_autoSyncBusy) return;
   if(document.hidden) return;
 
-  var beforeCount = getTx().length;
   try{
     _autoSyncBusy = true;
+
     await syncMasterSilent();
     await syncTxSilent();
+
     renderDash();
     renderHist();
     renderStock();
     renderShort();
     renderMaster();
     updateSyncChip();
-    var diff = getTx().length - beforeCount;
+
+    var afterCount = getTx().length;
+    var diff = afterCount - beforeCount;
+
     if(diff > 0){
-      var last = getTx().slice(-1)[0];
-      if(last) toast((last.type==='입고'?'📥':'📤')+' 신규 '+last.type+' '+diff+'건 반영');
+      var tx = getTx();
+      var last = tx[tx.length - 1];
+
+      if(last){
+        if(last.type === '입고'){
+          toast('📥 신규 입고 ' + diff + '건 반영');
+        }else if(last.type === '출고'){
+          toast('📤 신규 출고 ' + diff + '건 반영');
+        }else{
+          toast('📦 신규 이력 ' + diff + '건 반영');
+        }
+      }
     }
+
   }catch(e){
-    console.log('[autoSync] error:', e.message);
+    /* autoSyncAllSilent error silently ignored */
   }finally{
     _autoSyncBusy = false;
   }
 }
-
 function startAutoSync(){
   stopAutoSync();
-  if(!_getActiveGasUrl()) return;   /* URL 없으면 타이머 시작 안 함 */
+  var s=getSettings();
+  if(!s || s.useGas!=='Y') return;
+
   _autoSyncTimer = setInterval(function(){
     autoSyncAllSilent();
   }, AUTO_SYNC_MS);
@@ -2545,343 +2117,13 @@ function stopAutoSync(){
   }
 }
 
-/* ─── 모바일 네비게이션 ─── */
-var _isMobile = function(){ return window.innerWidth <= 600; };
-
-function mNavTo(tab) {
-  goTab(tab);
-  /* 하단 네비 active 상태 */
-  document.querySelectorAll('.mnav-btn').forEach(function(b){
-    b.classList.toggle('on', b.dataset.tab === tab);
-  });
-}
-
-function openDrawer() {
-  var d = document.getElementById('mobileDrawer');
-  if (d) d.classList.add('open');
-  /* 드로어 브랜드 반영 */
-  var s = getSettings();
-  var co = s.company || CONFIG.COMPANY;
-  var lg = (s.logo || CONFIG.LOGO_TEXT).slice(0,3);
-  var el1 = document.getElementById('drawerLogo');
-  var el2 = document.getElementById('drawerName');
-  if (el1) el1.textContent = lg;
-  if (el2) el2.textContent = co;
-}
-
-function closeDrawer() {
-  var d = document.getElementById('mobileDrawer');
-  if (d) d.classList.remove('open');
-}
-
-function drawerTo(tab) {
-  closeDrawer();
-  goTab(tab);
-  /* 하단 네비 active 동기화 */
-  document.querySelectorAll('.mnav-btn').forEach(function(b){
-    b.classList.toggle('on', b.dataset.tab === tab);
-  });
-}
-
-/* 하단 네비 배지 업데이트 */
-function updateMNavBadge(n) {
-  var el = document.getElementById('mNavBadge');
-  if (!el) return;
-  el.textContent = n || 0;
-  el.classList.toggle('show', (n || 0) > 0);
-}
-
-/* 초기 모바일 네비 상태 — 입출고 등록 활성 */
-(function initMobileNav() {
-  /* PC에서는 대시보드가 기본이므로 모바일만 처리 */
-  if (_isMobile()) {
-    document.querySelectorAll('.mnav-btn').forEach(function(b){
-      b.classList.toggle('on', b.dataset.tab === 'reg');
-    });
-  }
-})();
-
-/* ─── 재고조회 모바일 카드형 렌더 ─── */
-var _origRenderStock = renderStock;
-renderStock = function() {
-  _origRenderStock();
-  if (!_isMobile()) return;
-  /* 모바일: td에 data-label 주입 */
-  var WH = CONFIG.WAREHOUSES;
-  var labels = ['품목코드','품목명','규격','단위','전체재고', WH[0]||'창고1', WH[1]||'창고2','안전재고','상태'];
-  var trs = document.querySelectorAll('#stockTbody tr');
-  trs.forEach(function(tr){
-    var tds = tr.querySelectorAll('td');
-    tds.forEach(function(td, i){
-      if(labels[i]) td.setAttribute('data-label', labels[i]);
-    });
-  });
-};
-
-/* 부족재고도 모바일 data-label 주입 */
-var _origRenderShort = renderShort;
-renderShort = function() {
-  _origRenderShort();
-  /* 배지 동기화 */
-  var cnt = document.getElementById('shortCnt');
-  if (cnt) {
-    var n = parseInt(cnt.textContent) || 0;
-    updateMNavBadge(n);
-  }
-  if (!_isMobile()) return;
-  var labels = ['품목코드','품목명','현재고','안전재고','부족수량','긴급도'];
-  var trs = document.querySelectorAll('#shortTbody tr');
-  trs.forEach(function(tr){
-    var tds = tr.querySelectorAll('td');
-    tds.forEach(function(td, i){
-      if(labels[i]) td.setAttribute('data-label', labels[i]);
-    });
-  });
-};
-
-/* updateShortBadge 오버라이드 — 모바일 네비 배지도 함께 */
-var _origUpdateShortBadge = updateShortBadge;
-updateShortBadge = function(n) {
-  _origUpdateShortBadge(n);
-  updateMNavBadge(n);
-};
+/* ─── 초기 시드 데이터 ─── */
 (function(){
   if(!getMaster().length){
     setMaster(CONFIG.SEED_ITEMS);
   }
 })();
 
-</script>
-
-<!-- ══ PWA: Service Worker 등록 v3 ══ -->
-<script>
-(function(){
-  'use strict';
-
-  /* ── 빌드 버전 UI 반영 ── */
-  function setBuildUI(appBuild, swBuild) {
-    var els = {
-      loginBuildVer:   document.getElementById('loginBuildVer'),
-      sideBuildVer:    document.getElementById('sideBuildVer'),
-      statusBuildId:   document.getElementById('statusBuildId'),
-      statusSwBuildId: document.getElementById('statusSwBuildId')
-    };
-    var appStr = appBuild || (window.CONFIG && CONFIG.BUILD_ID) || '?';
-    var swStr  = swBuild  || '로딩 중...';
-    if(els.loginBuildVer)   els.loginBuildVer.textContent   = 'build.' + appStr;
-    if(els.sideBuildVer)    els.sideBuildVer.textContent    = 'build.' + appStr;
-    if(els.statusBuildId)   els.statusBuildId.textContent   = appStr;
-    if(els.statusSwBuildId) els.statusSwBuildId.textContent = swStr;
-    /* 앱/SW 빌드 불일치 경고 */
-    if(swBuild && appStr !== swStr) {
-      var box = document.getElementById('buildStatusBox');
-      if(box) box.style.borderColor = '#fbbf24';
-      console.warn('[PWA] 앱/SW 빌드 불일치 — 강제 새로고침 필요:', appStr, '≠', swStr);
-    }
-  }
-
-  /* ── GAS URL 상태 UI 반영 ── */
-  function setGasStatusUI() {
-    var urlEl   = document.getElementById('statusGasUrl');
-    var srcEl   = document.getElementById('statusGasSource');
-    if(!urlEl || !srcEl) return;
-
-    var inputEl  = document.getElementById('setGasUrl');
-    var fromInput = inputEl ? inputEl.value.trim() : '';
-    var fromLS    = (function(){
-      try{
-        var s = JSON.parse(localStorage.getItem(
-          'inv_' + (CONFIG.CLIENT_ID||'smartinv') + '_settings'
-        ));
-        return s && s.gasUrl ? s.gasUrl.trim() : '';
-      }catch(e){ return ''; }
-    })();
-    var fromConfig = (window.CONFIG && CONFIG.GAS_URL) ? CONFIG.GAS_URL : '';
-
-    var activeUrl, source;
-    if(fromInput)       { activeUrl = fromInput;   source = '📝 입력칸 (미저장)'; }
-    else if(fromLS)     { activeUrl = fromLS;       source = '💾 localStorage'; }
-    else if(fromConfig) { activeUrl = fromConfig;   source = '⚙️ CONFIG 내장값'; }
-    else                { activeUrl = '(없음)';     source = '❌ 설정 필요'; }
-
-    var short = activeUrl.length > 40 ? activeUrl.slice(0,20)+'...'+activeUrl.slice(-15) : activeUrl;
-    urlEl.textContent = short;
-    srcEl.textContent = source;
-
-    /* 색상 */
-    urlEl.style.color = activeUrl === '(없음)' ? '#dc2626' : '#059669';
-    srcEl.style.color = fromInput ? '#d97706' : (fromLS ? '#2563eb' : '#7c3aed');
-  }
-
-  /* ── 설정 탭 열릴 때 상태 자동 갱신 ── */
-  window.refreshBuildStatus = function() {
-    setBuildUI(null, null);
-    setGasStatusUI();
-    /* SW에 빌드ID 요청 */
-    if(navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'GET_BUILD_ID' });
-    }
-    try { toast('상태를 확인했습니다'); } catch(e) {}
-  };
-
-  /* ── 강제 새로고침 ── */
-  window.hardReload = function() {
-    if(navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
-    }
-    setTimeout(function() {
-      window.location.reload(true);
-    }, 300);
-  };
-
-  /* ── SW 메시지 수신 ── */
-  if('serviceWorker' in navigator) {
-    navigator.serviceWorker.addEventListener('message', function(e) {
-      if(!e.data) return;
-      switch(e.data.type) {
-        case 'SW_UPDATED':
-          /* SW가 새 버전으로 교체됨 → 빌드ID 반영 + 토스트 */
-          console.log('[PWA] SW 업데이트 완료:', e.data.buildId);
-          setBuildUI(
-            window.CONFIG ? CONFIG.BUILD_ID : null,
-            e.data.buildId
-          );
-          try { toast('✅ 앱이 최신 버전으로 업데이트되었습니다'); } catch(ex) {}
-          break;
-        case 'BUILD_ID':
-          setBuildUI(
-            window.CONFIG ? CONFIG.BUILD_ID : null,
-            e.data.buildId
-          );
-          break;
-      }
-    });
-  }
-
-  /* ── Service Worker 등록 ── */
-  if('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('./sw.js', { scope: './' })
-        .then(function(reg) {
-          console.log('[SW] 등록:', reg.scope);
-
-          /* 앱 빌드 ID 표시 */
-          setBuildUI(window.CONFIG ? CONFIG.BUILD_ID : null, null);
-
-          /* SW에 빌드ID 즉시 요청 */
-          var sw = reg.active || reg.installing || reg.waiting;
-          if(sw) sw.postMessage({ type: 'GET_BUILD_ID' });
-
-          /* 새 SW 감지 */
-          reg.addEventListener('updatefound', function() {
-            var newSW = reg.installing;
-            if(!newSW) return;
-            newSW.addEventListener('statechange', function() {
-              if(newSW.state === 'installed') {
-                if(navigator.serviceWorker.controller) {
-                  /* 새 버전 대기 중 → 즉시 적용 요청 */
-                  newSW.postMessage({ type: 'SKIP_WAITING' });
-                  try { toast('🔄 최신 버전 적용 중... 잠시 후 새로고침됩니다'); } catch(ex) {}
-                }
-              }
-            });
-          });
-        })
-        .catch(function(err) {
-          console.warn('[SW] 등록 실패:', err);
-          setBuildUI(window.CONFIG ? CONFIG.BUILD_ID : null, 'SW 오류');
-        });
-
-      /* SW controller 교체 시 자동 새로고침 */
-      var refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', function() {
-        if(!refreshing) { refreshing = true; window.location.reload(); }
-      });
-    });
-  } else {
-    /* SW 미지원 환경 */
-    document.addEventListener('DOMContentLoaded', function() {
-      setBuildUI(window.CONFIG ? CONFIG.BUILD_ID : null, 'SW 미지원');
-    });
-  }
-
-  /* ── SW 메시지 헬퍼 ── */
-  window.swClearCache = function() {
-    if(navigator.serviceWorker && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'CLEAR_CACHE' });
-      try { toast('✅ 캐시를 초기화했습니다'); } catch(e) {}
-    } else {
-      try { toast('Service Worker가 활성화되지 않았습니다'); } catch(e) {}
-    }
-  };
-
-  /* ── PWA 설치 배너 ── */
-  var _prompt = null;
-  window.addEventListener('beforeinstallprompt', function(e) {
-    e.preventDefault();
-    _prompt = e;
-    var btn = document.getElementById('pwaInstallBtn');
-    if(btn) btn.style.display = 'flex';
-  });
-
-  window.pwaInstall = function() {
-    if(!_prompt) { try { goTab('settings'); } catch(ex) {} return; }
-    _prompt.prompt();
-    _prompt.userChoice.then(function(r) {
-      _prompt = null;
-      var btn = document.getElementById('pwaInstallBtn');
-      if(btn) btn.style.display = 'none';
-      if(r.outcome === 'accepted') try { toast('✅ 홈화면에 설치되었습니다'); } catch(ex) {}
-    });
-  };
-
-  window.addEventListener('appinstalled', function() {
-    try { toast('📱 홈화면에 추가되었습니다!'); } catch(e) {}
-    var btn = document.getElementById('pwaInstallBtn');
-    if(btn) btn.style.display = 'none';
-  });
-
-  /* ── 온라인/오프라인 감지 ── */
-  function syncOnlineUI() {
-    var chip = document.getElementById('onlineChip');
-    if(!chip) return;
-    if(navigator.onLine) {
-      chip.textContent = '🟢 온라인'; chip.className = 'chip green';
-    } else {
-      chip.textContent = '🔴 오프라인'; chip.className = 'chip red';
-      try { toast('⚠️ 오프라인 — 로컬 데이터로 동작합니다'); } catch(e) {}
-    }
-  }
-  window.addEventListener('online',  syncOnlineUI);
-  window.addEventListener('offline', syncOnlineUI);
-  document.addEventListener('DOMContentLoaded', syncOnlineUI);
-
-  /* ── standalone 감지 ── */
-  var isStandalone = window.matchMedia('(display-mode: standalone)').matches
-                  || window.navigator.standalone === true;
-  if(isStandalone) {
-    document.documentElement.classList.add('pwa-standalone');
-    var btn = document.getElementById('pwaInstallBtn');
-    if(btn) btn.style.display = 'none';
-  }
-
-  /* ── 설정 탭 열릴 때 GAS 상태 자동 갱신 (goTab 훅) ── */
-  document.addEventListener('DOMContentLoaded', function() {
-    var origGoTab = window.goTab;
-    if(origGoTab) {
-      window.goTab = function(name) {
-        origGoTab(name);
-        if(name === 'settings') {
-          setTimeout(setGasStatusUI, 100);
-          refreshBuildStatus();
-        }
-      };
-    }
-    /* 초기 빌드 ID 표시 */
-    setBuildUI(window.CONFIG ? CONFIG.BUILD_ID : null, null);
-  });
-
-})();
 </script>
 
 </body>
