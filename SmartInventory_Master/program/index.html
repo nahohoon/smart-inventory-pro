@@ -1912,20 +1912,30 @@ async function testGas(){
   var s=getSettings();
   try{
     showLoad(true);
+
     var url=s.gasUrl||CONFIG.GAS_URL;
     var res=await fetch(url+'?action=dashboard');
     var data=await res.json();
-    if(data.success){
+
+    if(data && data.success){
       document.getElementById('connState').className='chip green';
       document.getElementById('connState').textContent='✅ 연결 정상';
-      toast('GAS 연결 성공');
+
+      var msg = data.message || 'dashboard 연결 정상';
+      toast('GAS 연결 성공: ' + msg);
+
       startAutoSync();
-    }else throw new Error(data.message||'dashboard 응답 실패');
+    }else{
+      throw new Error((data && data.message) ? data.message : 'dashboard 응답 실패');
+    }
+
   }catch(e){
     document.getElementById('connState').className='chip red';
     document.getElementById('connState').textContent='❌ 연결 실패';
-    showAlert('연결 실패',e.message);
-  }finally{showLoad(false);}
+    showAlert('연결 실패', e.message || '알 수 없는 오류');
+  }finally{
+    showLoad(false);
+  }
 }
 
 function updateSyncChip(){
