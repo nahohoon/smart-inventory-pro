@@ -1978,26 +1978,38 @@ function normalizeTxRow(r){
 async function syncMasterSilent(){
   var s=getSettings();
   if(s.useGas!=='Y') return;
-  var res=await fetch((s.gasUrl||CONFIG.GAS_URL)+'?action=items');
+
+  var res=await fetch((s.gasUrl||CONFIG.GAS_URL)+'?action=getMasterItems');
   var data=await res.json();
-  var rows = data.items || data.data || [];
-  if(data.success && Array.isArray(rows)){
-    setMaster(rows.map(normalizeMasterItem).filter(function(r){return r.code;}));
+
+  var items = data.items || data.data || data.masterItems || [];
+
+  if(!Array.isArray(items)){
+    throw new Error('품목 데이터 형식 오류');
   }
+
+  var normalized = items.map(normalizeMasterItem);
+  setMaster(normalized);
+
   lsSet(KEYS.SYNC,new Date().toISOString());
 }
 
 async function syncTxSilent(){
   var s=getSettings();
   if(s.useGas!=='Y') return;
-  var res=await fetch((s.gasUrl||CONFIG.GAS_URL)+'?action=transactions');
+
+  var res=await fetch((s.gasUrl||CONFIG.GAS_URL)+'?action=getTransactions');
   var data=await res.json();
-  var rows = data.transactions || data.data || [];
-  if(data.success && Array.isArray(rows)){
-    // API가 최신순으로 내려오므로 화면 내부 계산용으로 시간 오름차순 저장
-    var normalized = rows.map(normalizeTxRow).filter(function(r){return r.code;}).reverse();
-    setTx(normalized);
+
+  var transactions = data.transactions || data.data || data.rows || [];
+
+  if(!Array.isArray(transactions)){
+    throw new Error('이력 데이터 형식 오류');
   }
+
+  var normalized = transactions.map(normalizeTxItem);
+  setTx(normalized);
+
   lsSet(KEYS.SYNC,new Date().toISOString());
 }
 
