@@ -818,9 +818,17 @@ tr:hover td{background:#fafbfc}
             <div class="card">
               <div class="card-hd"><h3>Apps Script 연동</h3></div>
               <div class="card-bd" style="display:grid;gap:12px">
-                <div class="fg"><label>Apps Script URL</label><input id="setGasUrl" placeholder="https://script.google.com/macros/s/..."></div>
+                <!-- URL 입력 + 저장 버튼 -->
+                <div class="fg">
+                  <label>Apps Script URL</label>
+                  <div style="display:flex;gap:8px;align-items:center">
+                    <input id="setGasUrl" placeholder="https://script.google.com/macros/s/..." style="flex:1">
+                    <button class="btn pri" style="white-space:nowrap;padding:11px 16px" onclick="saveGasUrl()">💾 저장</button>
+                  </div>
+                  <div id="gasUrlStatus" style="font-size:12px;color:#15803d;margin-top:5px;display:none"></div>
+                </div>
                 <div class="fg"><label>저장 방식</label>
-                  <select id="setUseGas"><option value="N">로컈만 사용 (오프라인)</option><option value="Y">Google Sheets 저장</option></select>
+                  <select id="setUseGas"><option value="N">로컬만 사용 (오프라인)</option><option value="Y">Google Sheets 저장</option></select>
                 </div>
                 <div class="btns">
                   <button class="btn pri" onclick="testGas()">🔌 연결 테스트</button>
@@ -934,13 +942,26 @@ var P = 'inv_' + CONFIG.CLIENT_ID + '_';
 var KEYS = { S: P+'settings', M: P+'master', T: P+'tx', SYNC: P+'syncTime', LOGO: P+'logoImg' };
 function lsGet(k,def){try{var v=localStorage.getItem(k);return v!==null?JSON.parse(v):def;}catch(e){return def;}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
-function getSettings(){return lsGet(KEYS.S,{
-  company:CONFIG.COMPANY, logo:CONFIG.LOGO_TEXT,
-  subtitle:CONFIG.SUBTITLE, footer:CONFIG.FOOTER, contact:CONFIG.CONTACT,
-  gasUrl:CONFIG.GAS_URL, defaultMgr:'',
-  defaultWh:CONFIG.WAREHOUSES[0], pageSize:'20', useGas:'Y',
-  theme:CONFIG.THEME
-});}
+/* ─── GAS URL 우선순위: sip_gas_url(localStorage) > 설정저장값 > CONFIG.GAS_URL ─── */
+function getGasUrl(){
+  return localStorage.getItem('sip_gas_url') || CONFIG.GAS_URL;
+}
+function getSettings(){
+  var def = {
+    company:CONFIG.COMPANY, logo:CONFIG.LOGO_TEXT,
+    subtitle:CONFIG.SUBTITLE, footer:CONFIG.FOOTER, contact:CONFIG.CONTACT,
+    gasUrl:getGasUrl(), defaultMgr:'',
+    defaultWh:CONFIG.WAREHOUSES[0], pageSize:'20', useGas:'Y',
+    theme:CONFIG.THEME
+  };
+  var s = lsGet(KEYS.S, def) || def;
+  /* ★ 수정: CONFIG.GAS_URL로 강제 덮어쓰기 제거 — localStorage 저장값 우선 사용 */
+  s.gasUrl = getGasUrl();
+  s.useGas = s.useGas || 'Y';
+  if(!s.theme) s.theme = CONFIG.THEME;
+  if(!s.pageSize) s.pageSize = '20';
+  return s;
+}
 function getMaster(){return lsGet(KEYS.M,[]);}
 function setMaster(v){lsSet(KEYS.M,v);}
 function getTx(){return lsGet(KEYS.T,[]);}
@@ -1039,7 +1060,7 @@ function kyRestoreSession() {
   try { renderShort(); } catch(e) {}
   try { renderMaster(); } catch(e) {}
   try { toast(user.name + '님 자동 로그인'); } catch(e) {}
-  try { startAutoSync(); } catch(e) {}
+  try { startAutoSync(); autoSyncAllSilent(); } catch(e) {}
 })();
 
 function doLogin(){
@@ -1072,7 +1093,7 @@ function doLogin(){
   try{renderShort();}catch(e){}
   try{renderMaster();}catch(e){}
   toast(user.name+'님 로그인 완료');
-  try{ startAutoSync(); }catch(e){}
+  try{ startAutoSync(); autoSyncAllSilent(); }catch(e){}
 }
 document.getElementById('loginBtn').addEventListener('click',doLogin);
 document.getElementById('loginPw').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
@@ -1165,8 +1186,9 @@ function applyBrand(){
   sv('setContact',s.contact||CONFIG.CONTACT);
   sv('setMgr',s.defaultMgr||'');
   sv('setPgSz',s.pageSize||'20');
-  sv('setGasUrl',s.gasUrl||CONFIG.GAS_URL);
-  sv('setUseGas',s.useGas||'Y');
+  /* ★ sip_gas_url 우선으로 URL 입력칸 채우기 */
+  sv('setGasUrl', getGasUrl());
+  sv('setUseGas',s.useGas||'N');
   /* 테마 컬러 폼 */
   sv('setClrPrimary',th.primary||'#2563eb');
   sv('setClrAccent',th.accent||'#16a34a');
@@ -1186,6 +1208,32 @@ function applySettingsToForm(silent){
   if(!silent)toast('기본값 반영 완료');
 }
 function gv(id,def){var el=document.getElementById(id);return el?(el.value.trim()||def||''):def||'';}
+/* ─── GAS URL 전용 저장 함수 ─── */
+function saveGasUrl(){
+  var inputEl = document.getElementById('setGasUrl');
+  var url = inputEl ? inputEl.value.trim() : '';
+  if(!url){
+    toast('⚠️ URL을 입력해주세요');
+    return;
+  }
+  /* sip_gas_url 키로 localStorage 저장 */
+  localStorage.setItem('sip_gas_url', url);
+  /* 설정 저장값도 함께 업데이트 */
+  var s = getSettings();
+  s.gasUrl = url;
+  lsSet(KEYS.S, s);
+  /* 입력칸에 저장된 URL 그대로 표시 */
+  if(inputEl) inputEl.value = url;
+  /* 저장 완료 안내 표시 */
+  var statusEl = document.getElementById('gasUrlStatus');
+  if(statusEl){
+    statusEl.style.display = 'block';
+    statusEl.textContent = '✅ URL 저장 완료 — 새로고침 후에도 유지됩니다';
+    setTimeout(function(){ statusEl.style.display = 'none'; }, 3000);
+  }
+  toast('✅ GAS URL 저장 완료');
+  try{ startAutoSync(); }catch(e){}
+}
 function saveSettings(){
   var th={
     primary:gv('setClrPrimary','#2563eb'),
@@ -1195,17 +1243,19 @@ function saveSettings(){
     sideBtm:gv('setClrSideBtm','#1a3a6b'),
     loginTop:gv('setClrLoginTop','#0a1628')
   };
+  /* gasUrl은 sip_gas_url 우선, 없으면 입력값 사용 */
+  var savedUrl = localStorage.getItem('sip_gas_url') || gv('setGasUrl',CONFIG.GAS_URL);
   lsSet(KEYS.S,{
     company:gv('setCo',CONFIG.COMPANY),
     logo:gv('setLogo',CONFIG.LOGO_TEXT),
     subtitle:gv('setSubtitle',CONFIG.SUBTITLE),
     footer:gv('setFooter',CONFIG.FOOTER),
     contact:gv('setContact',''),
-    gasUrl:gv('setGasUrl',CONFIG.GAS_URL),
+    gasUrl:savedUrl,
     defaultMgr:gv('setMgr',''),
     defaultWh:gv('setWh',CONFIG.WAREHOUSES[0]),
     pageSize:gv('setPgSz','20'),
-    useGas:gv('setUseGas','Y'),
+    useGas:gv('setUseGas','N'),
     theme:th
   });
   applyBrand();toast('설정 저장 완료');try{startAutoSync();}catch(e){}
@@ -1884,8 +1934,8 @@ function renderStats(){
 /* ─── GAS 통신 ─── */
 function gasGet(action,params){
   return new Promise(function(resolve,reject){
-    var s=getSettings();
-    var url=s.gasUrl||CONFIG.GAS_URL;
+    /* ★ 항상 getGasUrl()로 URL 읽기 */
+    var url=getGasUrl();
     if(!url){reject(new Error('GAS URL이 설정되지 않았습니다'));return;}
     var p=Object.assign({action:action},params||{});
     var qs=Object.keys(p).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(p[k]!=null?p[k]:'');}).join('&');
@@ -1900,23 +1950,33 @@ function gasGet(action,params){
 
 /* ─── 동기화 ─── */
 async function testGas(){
-  var s=getSettings();
   try{
     showLoad(true);
-    var url=s.gasUrl||CONFIG.GAS_URL;
-    var res=await fetch(url+'?action=test');
+    /* ★ 항상 getGasUrl()로 URL 읽기 */
+    var url = getGasUrl();
+    if(!url){ throw new Error('GAS URL이 설정되지 않았습니다. URL 입력 후 [저장] 버튼을 먼저 눌러주세요.'); }
+
+    var res=await fetch(url+'?action=dashboard');
     var data=await res.json();
-    if(data.success){
+
+    if(data && data.success){
       document.getElementById('connState').className='chip green';
       document.getElementById('connState').textContent='✅ 연결 정상';
-      toast('GAS 연결 성공: '+data.message);
-      startAutoSync();
-    }else throw new Error(data.message);
+      /* ★ undefined 방지: message가 없을 때 기본 문구 */
+      var msg = (data.message && data.message !== 'undefined') ? data.message : '연결 정상';
+      toast('✅ GAS 연결 성공: ' + msg);
+    }else{
+      var errMsg = (data && data.message && data.message !== 'undefined') ? data.message : '응답 실패';
+      throw new Error(errMsg);
+    }
+
   }catch(e){
     document.getElementById('connState').className='chip red';
     document.getElementById('connState').textContent='❌ 연결 실패';
-    showAlert('연결 실패',e.message);
-  }finally{showLoad(false);}
+    showAlert('연결 실패', e.message || '알 수 없는 오류');
+  }finally{
+    showLoad(false);
+  }
 }
 
 function updateSyncChip(){
@@ -1924,25 +1984,79 @@ function updateSyncChip(){
   document.getElementById('syncTimeChip').textContent=t?'마지막 동기화: '+new Date(t).toLocaleString('ko-KR'):'마지막 동기화: 없음';
 }
 
+function normalizeMasterItem(r){
+  return {
+    code: String(r.code || r.barcode || '').trim(),
+    name: r.name || r.itemName || '',
+    spec: r.spec || r.model || '',
+    unit: r.unit || 'EA',
+    safety: Number(r.safety || 0)
+  };
+}
+
+function normalizeTxRow(r){
+  var type = String(r.type || '').trim();
+  var inP = Number(r.inPrice || 0);
+  var outP = Number(r.outPrice || 0);
+  return {
+    date: r.date || '',
+    code: String(r.code || r.barcode || '').trim(),
+    name: r.name || r.itemName || '',
+    type: type,
+    qty: Number(r.qty || 0),
+    price: type === '입고' ? inP : outP,
+    inPrice: inP,
+    outPrice: outP,
+    currentStock: Number(r.currentStock || 0),
+    warehouse: r.warehouse || r.wh || '',
+    wh: r.warehouse || r.wh || '',
+    site: r.site || r.siteName || '',
+    siteName: r.site || r.siteName || '',
+    manager: r.manager || ''
+  };
+}
+
 async function syncMasterSilent(){
   var s=getSettings();
   if(s.useGas!=='Y') return;
-  var res=await fetch((s.gasUrl||CONFIG.GAS_URL)+'?action=getMasterItems');
+  /* ★ 항상 getGasUrl()로 URL 읽기 */
+  var res=await fetch(getGasUrl()+'?action=getMasterItems');
   var data=await res.json();
-  if(data.success&&data.items){ setMaster(data.items); }
+
+  var items = data.items || data.data || data.masterItems || [];
+
+  if(!Array.isArray(items)){
+    throw new Error('품목 데이터 형식 오류');
+  }
+
+  var normalized = items.map(normalizeMasterItem);
+  setMaster(normalized);
+
   lsSet(KEYS.SYNC,new Date().toISOString());
 }
 
 async function syncTxSilent(){
   var s=getSettings();
   if(s.useGas!=='Y') return;
-  var res=await fetch((s.gasUrl||CONFIG.GAS_URL)+'?action=getTransactions');
+  /* ★ 항상 getGasUrl()로 URL 읽기 */
+  var res=await fetch(getGasUrl()+'?action=getTransactions');
   var data=await res.json();
-  if(data.success&&data.transactions){ setTx(data.transactions); }
+
+  var transactions = data.transactions || data.data || data.rows || [];
+
+  if(!Array.isArray(transactions)){
+    throw new Error('이력 데이터 형식 오류');
+  }
+
+  var normalized = transactions.map(normalizeTxRow);
+  setTx(normalized);
+
   lsSet(KEYS.SYNC,new Date().toISOString());
 }
 
 async function syncMasterNow(){
+  /* ★ getGasUrl() 사용 — URL 확인 */
+  if(!getGasUrl()){ toast('⚠️ GAS URL을 먼저 저장해주세요'); return; }
   try{
     showLoad(true);
     await syncMasterSilent();
@@ -1959,6 +2073,8 @@ async function syncMasterNow(){
 }
 
 async function syncTxNow(){
+  /* ★ getGasUrl() 사용 — URL 확인 */
+  if(!getGasUrl()){ toast('⚠️ GAS URL을 먼저 저장해주세요'); return; }
   try{
     showLoad(true);
     await syncTxSilent();
@@ -1984,6 +2100,11 @@ async function doRefreshAll(){
     renderShort();
     renderMaster();
     toast('로컬 데이터 새로고침 완료');
+    return;
+  }
+  /* ★ getGasUrl() 확인 */
+  if(!getGasUrl()){
+    toast('⚠️ GAS URL을 먼저 저장해주세요');
     return;
   }
   try{
