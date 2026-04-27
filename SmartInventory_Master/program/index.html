@@ -1924,7 +1924,7 @@ async function testGas(){
       var msg = data.message || 'dashboard 연결 정상';
       toast('GAS 연결 성공: ' + msg);
 
-      startAutoSync();
+      //startAutoSync();
     }else{
       throw new Error((data && data.message) ? data.message : 'dashboard 응답 실패');
     }
