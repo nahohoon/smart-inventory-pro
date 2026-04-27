@@ -274,19 +274,9 @@ tr:hover td{background:#fafbfc}
 .filter-tag button{background:none;border:none;cursor:pointer;color:#93c5fd;font-size:13px;line-height:1;padding:0 0 0 2px}
 .filter-tag button:hover{color:#dc2626}
 
+/* ── 태블릿 (≤ 900px) ── */
 @media(max-width:900px){
   .search-fields{grid-template-columns:repeat(3,1fr)}
-}
-@media(max-width:600px){
-  .search-fields{grid-template-columns:1fr 1fr}
-  .date-row{flex-direction:column}
-  .quick-btns{gap:4px}
-  .quick-btn{padding:7px 9px;font-size:11px}
-  .action-row{flex-direction:column;align-items:flex-start}
-}
-
-/* 기존 모바일 */
-@media(max-width:900px){
   .kpi-row{grid-template-columns:repeat(2,1fr)}
   .settings-grid,.grid2{grid-template-columns:1fr}
   .side{width:200px}
@@ -297,6 +287,7 @@ tr:hover td{background:#fafbfc}
   .content{padding:14px}
   .color-row{grid-template-columns:1fr 1fr}
 }
+/* ── 소형 태블릿·대형 폰 (≤ 600px) ── */
 @media(max-width:600px){
   .side{display:none}
   .frow,.frow3,.frow4{grid-template-columns:1fr}
@@ -305,6 +296,11 @@ tr:hover td{background:#fafbfc}
   .tb-left h2{font-size:16px}
   .color-row{grid-template-columns:1fr}
   .login-wrap{width:94%;padding:10px}
+  .search-fields{grid-template-columns:1fr 1fr}
+  .date-row{flex-direction:column}
+  .quick-btns{gap:4px}
+  .quick-btn{padding:7px 9px;font-size:11px}
+  .action-row{flex-direction:column;align-items:flex-start}
 }
 
 /* ── 테이블 스크롤바 커스텀 (v8) ── */
@@ -325,6 +321,240 @@ tr:hover td{background:#fafbfc}
 .hist-table td.td-mgr{color:#64748b;font-size:12px}
 .hist-table td.td-site{color:#334155;font-size:12px}
 .hist-table td.td-wh{color:#475569;font-size:12px}
+/* ══════════════════════════════════════════════
+   모바일 전용 스타일 (≤ 430px — 안드로이드 폰 기준)
+   ※ JS·GAS·동기화·날짜 파싱 코드 일절 수정 없음
+   ══════════════════════════════════════════════ */
+
+/* ── 하단 탭바 (모바일 only) ── */
+#mobileTabBar{
+  display:none; /* PC에서는 숨김 */
+}
+@media(max-width:430px){
+
+  /* ── 기반 레이아웃 ── */
+  html,body{-webkit-text-size-adjust:100%;overflow-x:hidden}
+  #appWrap{padding-bottom:62px!important} /* 탭바 높이만큼 여백 */
+  .side{display:none!important}           /* 사이드바 완전 숨김 */
+  .main{flex:1;min-width:0}
+  .layout{flex-direction:column}
+
+  /* ── 상단 탑바 ── */
+  .topbar{
+    padding:0 14px;
+    height:52px;
+    position:sticky;
+    top:0;
+    z-index:100;
+    box-shadow:0 2px 8px rgba(0,0,0,.08);
+  }
+  .tb-left h2{font-size:15px;font-weight:800}
+  .tb-left .tb-sub{display:none}       /* 부제 숨김 — 공간 절약 */
+  .tb-right .chip.gray{display:none}   /* 날짜 칩 숨김 */
+  .tb-right .chip.blue{display:none}   /* 회사명 칩 숨김 */
+  .user-chip{padding:4px 10px 4px 6px;font-size:11px}
+
+  /* ── 컨텐츠 패딩 ── */
+  .content{padding:12px 12px 8px}
+
+  /* ── KPI 카드: 2열 → 공간 부족 시 자동 1열 ── */
+  .kpi-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .kpi-card{padding:13px 14px;border-radius:12px}
+  .kpi-val{font-size:24px}
+  .kpi-lbl{font-size:10.5px}
+  .kpi-meta{font-size:10px}
+
+  /* ── 카드 ── */
+  .card{border-radius:14px;margin-bottom:12px}
+  .card-hd{padding:12px 16px}
+  .card-hd h3{font-size:13.5px}
+  .card-bd{padding:12px 14px}
+
+  /* ── 그리드 → 1열 ── */
+  .grid2{grid-template-columns:1fr!important;gap:12px}
+  .settings-grid{grid-template-columns:1fr!important;gap:12px}
+
+  /* ── 입출고 등록: 폼 전부 1열 ── */
+  .frow,.frow3,.frow4{
+    grid-template-columns:1fr!important;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .fg label{font-size:12px;margin-bottom:4px}
+  .fg input,.fg select{
+    padding:12px 12px;
+    font-size:14px;
+    border-radius:10px;
+  }
+  /* 자동완성 목록 */
+  .ac-list{max-height:160px}
+
+  /* ── 버튼: 최소 44px 터치 영역 ── */
+  .btn{
+    min-height:44px;
+    padding:11px 16px;
+    font-size:13px;
+    border-radius:10px;
+  }
+  .btns{gap:8px;margin-top:12px;flex-wrap:wrap}
+  .btns .btn{flex:1;min-width:100px;text-align:center;justify-content:center}
+
+  /* ── 현재고 미리보기 ── */
+  .stock-prev{flex-direction:column;gap:6px;padding:10px 12px}
+  .sp-val{font-size:20px}
+
+  /* ── 입출고이력 테이블 ── */
+  .hist-table{
+    font-size:11px;
+    min-width:760px;  /* 가로 스크롤 유지 */
+  }
+  .hist-table th{
+    font-size:10.5px;
+    padding:9px 6px;
+    white-space:nowrap;
+  }
+  .hist-table td{
+    padding:9px 6px;
+    font-size:11px;
+  }
+  .tbl-wrap{
+    -webkit-overflow-scrolling:touch;
+    overflow-x:auto;
+  }
+  /* 히스토리 페이저 */
+  #histPager{flex-wrap:wrap;gap:5px;padding:10px 12px}
+  #histPager button{padding:7px 11px;font-size:11.5px;min-height:36px}
+  #histPager .pg-info{font-size:11px}
+
+  /* ── 이력 검색 패널 ── */
+  .search-panel{padding:14px 14px;border-radius:12px}
+  .search-fields{
+    grid-template-columns:1fr 1fr!important;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .search-field input,.search-field select{
+    padding:9px 10px;
+    font-size:12px;
+    border-radius:8px;
+  }
+  .date-row{flex-direction:column;gap:8px}
+  .quick-btns{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+  .quick-btn{padding:8px 11px;font-size:11px;min-height:36px}
+  .action-row{flex-direction:column;gap:8px;margin-top:12px;padding-top:12px}
+  .action-row-left,.action-row-right{width:100%;display:flex;gap:8px}
+  .action-row-left .btn,.action-row-right .btn{flex:1;min-height:44px}
+
+  /* ── 설정화면 ── */
+  .set-sec-title{font-size:10px;margin-bottom:8px}
+  .set-info{font-size:11.5px;line-height:1.9}
+  .color-row{grid-template-columns:1fr 1fr!important;gap:8px}
+  /* GAS URL 입력줄 세로 정렬 */
+  #setGasUrl{width:100%!important;font-size:13px}
+  .card-bd [style*="display:flex"][style*="gap:8px"]{
+    flex-direction:column;
+  }
+  .logo-upload-area{padding:12px}
+
+  /* ── 통계 canvas ── */
+  #whCanvas,#topCanvas,#monthCanvas{max-width:100%;height:auto!important}
+
+  /* ── 동기화 배너 ── */
+  #sync-banner{padding:10px 12px;gap:8px;border-radius:10px}
+  #sync-banner button{min-height:36px;font-size:11.5px}
+
+  /* ── 부족재고 / 품목마스터 테이블 ── */
+  table{font-size:12px}
+  th{font-size:10.5px;padding:9px 8px}
+  td{padding:10px 8px}
+  .toolbar{gap:8px}
+  .toolbar input,.toolbar select{padding:10px 10px;font-size:13px}
+
+  /* ── 로그인 ── */
+  .login-wrap{width:94%;padding:12px}
+  .login-box{padding:36px 24px 28px}
+  .login-box h2{font-size:19px}
+  .lf input{padding:12px 14px;font-size:14px}
+  #loginBtn{padding:13px;font-size:14px;min-height:48px}
+
+  /* ── 모달 ── */
+  .modal-box{padding:22px 18px;max-width:96vw}
+
+  /* ── 토스트 위치: 탭바 위 ── */
+  #toast{bottom:72px!important}
+
+  /* ── 하단 탭바 활성화 ── */
+  #mobileTabBar{
+    display:flex;
+    position:fixed;
+    bottom:0;left:0;right:0;
+    height:62px;
+    background:#fff;
+    border-top:1px solid #e2e8f0;
+    box-shadow:0 -2px 12px rgba(0,0,0,.08);
+    z-index:9000;
+    align-items:stretch;
+    justify-content:space-around;
+    padding:0 2px;
+    padding-bottom:env(safe-area-inset-bottom); /* iPhone 홈바 대응 */
+  }
+  .m-tab{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:2px;
+    border:none;
+    background:none;
+    cursor:pointer;
+    padding:4px 2px;
+    border-radius:10px;
+    transition:background .12s;
+    font-family:inherit;
+    -webkit-tap-highlight-color:transparent;
+    position:relative;
+  }
+  .m-tab:active{background:var(--cp-l)}
+  .m-tab.on{background:var(--cp-l)}
+  .m-tab-ico{font-size:18px;line-height:1}
+  .m-tab-lbl{
+    font-size:9.5px;
+    font-weight:700;
+    color:#64748b;
+    letter-spacing:-.01em;
+    white-space:nowrap;
+  }
+  .m-tab.on .m-tab-lbl{color:var(--cp)}
+  /* 부족재고 배지 */
+  .m-badge{
+    position:absolute;
+    top:3px;right:10px;
+    background:var(--cd,#dc2626);
+    color:#fff;
+    font-size:9px;
+    font-weight:800;
+    min-width:16px;
+    height:16px;
+    border-radius:99px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:0 4px;
+    line-height:1;
+  }
+  /* loadingOverlay 텍스트 */
+  #loadingOverlay p{font-size:13px}
+}
+/* ── 430px 초과 — 탭바·추가 CSS 숨김 ── */
+@media(min-width:431px){
+  #mobileTabBar{display:none!important}
+}
 </style>
 
   <!-- v8: Skywork 배지 완전 제거 -->
@@ -884,6 +1114,28 @@ tr:hover td{background:#fafbfc}
 
 <!-- 로딩 -->
 <div id="loadingOverlay"><div class="spinner"></div><p>처리 중...</p></div>
+
+<!-- ══ 모바일 하단 탭바 (JS: goTab() 재활용) ══ -->
+<nav id="mobileTabBar">
+  <button class="m-tab on" data-tab="dash" onclick="goTab('dash')">
+    <span class="m-tab-ico">🏠</span><span class="m-tab-lbl">대시보드</span>
+  </button>
+  <button class="m-tab" data-tab="reg" onclick="goTab('reg')">
+    <span class="m-tab-ico">📝</span><span class="m-tab-lbl">등록</span>
+  </button>
+  <button class="m-tab" data-tab="hist" onclick="goTab('hist')">
+    <span class="m-tab-ico">📋</span><span class="m-tab-lbl">이력</span>
+  </button>
+  <button class="m-tab" data-tab="stock" onclick="goTab('stock')">
+    <span class="m-tab-ico">📦</span><span class="m-tab-lbl">재고</span>
+  </button>
+  <button class="m-tab" data-tab="short" onclick="goTab('short')">
+    <span class="m-tab-ico">⚠️</span><span class="m-tab-lbl">부족<span class="m-badge" id="mShortBadge" style="display:none"></span></span>
+  </button>
+  <button class="m-tab" data-tab="settings" onclick="goTab('settings')">
+    <span class="m-tab-ico">⚙️</span><span class="m-tab-lbl">설정</span>
+  </button>
+</nav>
 
 <!-- 토스트 -->
 <div id="toast"></div>
@@ -2316,6 +2568,37 @@ function stopAutoSync(){
   if(!getMaster().length){
     setMaster(CONFIG.SEED_ITEMS);
   }
+})();
+
+/* ── 모바일 탭바 active 상태 동기화 ──
+   goTab() 호출 시 양쪽(사이드바 + 탭바) 모두 반영 */
+(function patchGoTabForMobile(){
+  var _orig = window.goTab;
+  if(typeof _orig !== 'function') return;
+  window.goTab = function(name){
+    _orig(name);
+    /* 하단 탭바 active 동기화 */
+    document.querySelectorAll('.m-tab').forEach(function(b){
+      b.classList.toggle('on', b.dataset.tab === name);
+    });
+  };
+})();
+
+/* ── 모바일 부족재고 배지 업데이트 ── */
+(function patchShortBadgeForMobile(){
+  var _orig = window.updateShortBadge;
+  if(typeof _orig !== 'function') return;
+  window.updateShortBadge = function(n){
+    _orig(n);
+    var mb = document.getElementById('mShortBadge');
+    if(!mb) return;
+    if(n > 0){
+      mb.textContent = n > 99 ? '99+' : String(n);
+      mb.style.display = 'flex';
+    } else {
+      mb.style.display = 'none';
+    }
+  };
 })();
 
 </script>
