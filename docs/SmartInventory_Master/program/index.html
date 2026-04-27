@@ -837,6 +837,7 @@ tr:hover td{background:#fafbfc}
                   <span class="chip gray" id="connState">⏸ 미연결</span>
                   <span class="chip gray" id="syncTimeChip">마지막 동기화: 없음</span>
                 </div>
+                <div id="gasUrlDisplay" style="margin-top:6px;font-size:11px;color:#64748b;word-break:break-all;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;display:none"></div>
                 <div class="btns">
                   <button class="btn sec" onclick="syncMasterNow()">&#128260; 품목 동기화</button>
                   <button class="btn sec" onclick="syncTxNow()">&#128260; 이력 동기화</button>
@@ -1915,30 +1916,63 @@ function renderStats(){
 function gasGet(action,params){
   return new Promise(function(resolve,reject){
     var s=getSettings();
-    var url=s.gasUrl||CONFIG.GAS_URL;
-    if(!url){reject(new Error('GAS URL이 설정되지 않았습니다'));return;}
+    var url=(s.gasUrl||CONFIG.GAS_URL||'').trim();
+    if(!url){reject(new Error('GAS URL이 설정되지 않았습니다. 설정 탭에서 Apps Script URL을 입력해 주세요.'));return;}
     var p=Object.assign({action:action},params||{});
     var qs=Object.keys(p).map(function(k){return encodeURIComponent(k)+'='+encodeURIComponent(p[k]!=null?p[k]:'');}).join('&');
-    var img=new Image();
-    img.onerror=function(){reject(new Error('네트워크 오류'));};
-    fetch(url+'?'+qs)
-      .then(function(r){return r.json();})
-      .then(function(data){if(data.success===false)reject(new Error(data.message||'GAS 오류'));else resolve(data);})
-      .catch(function(e){reject(e);});
+    fetch(url+'?'+qs,{method:'GET'})
+      .then(function(r){
+        if(!r.ok)throw new Error('HTTP '+r.status+' — Apps Script 호출 실패');
+        return r.text();
+      })
+      .then(function(rawText){
+        var data;
+        try{data=JSON.parse(rawText);}catch(e){
+          reject(new Error('JSON 파싱 실패 — 배포 URL/권한 확인 필요. 응답: '+rawText.slice(0,100)));
+          return;
+        }
+        if(data.success===false){reject(new Error(data.message||data.msg||data.error||'GAS 오류'));}
+        else{resolve(data);}
+      })
+      .catch(function(e){reject(new Error(e.message||'네트워크 오류'));});
   });
 }
 
 /* ─── 동기화 ─── */
 async function testGas(){
   var s=getSettings();
+  var url=(s.gasUrl||CONFIG.GAS_URL||'').trim();
+  /* URL 없음 안내 */
+  if(!url){
+    showAlert('⚠️ GAS URL 없음','설정 탭에서 Apps Script URL을 입력하고 저장 버튼을 눌러 주세요.');
+    return;
+  }
+  /* 설정창 URL 표시 업데이트 */
+  var elUrlDisp=document.getElementById('gasUrlDisplay');
+  if(elUrlDisp){elUrlDisp.style.display='block';elUrlDisp.textContent='현재 호출 URL: '+url;}
   try{
     showLoad(true);
-    var url=s.gasUrl||CONFIG.GAS_URL;
-    var res=await fetch(url+'?action=test');
-    var data=await res.json();
-    if(data.success){
+    var testUrl=url+'?action=test';
+    var res=await fetch(testUrl,{method:'GET'});
+    /* HTTP 상태 확인 */
+    if(!res.ok){
+      throw new Error('HTTP '+res.status+' — 배포 URL이나 권한을 확인해 주세요.');
+    }
+    /* 응답 텍스트 먼저 읽기 */
+    var rawText=await res.text();
+    var data;
+    try{
+      data=JSON.parse(rawText);
+    }catch(jsonErr){
+      /* JSON 파싱 실패 시 원문 앞 200자 표시 */
+      throw new Error('Apps Script 응답이 JSON 형식이 아닙니다.\n배포 URL 또는 권한(전체 공개), 리다이렉트 응답을 확인해 주세요.\n응답 앞부분: '+rawText.slice(0,200));
+    }
+    /* success 필드 확인 */
+    if(data.success===true||data.success==='true'){
       document.getElementById('connState').className='chip green';
       document.getElementById('connState').textContent='✅ 연결 정상';
+      /* message undefined 방지 */
+      var msg=data.message||data.msg||data.status||'Apps Script 연결 정상';
       /* 연결 성공 시 useGas:'Y' 자동 저장 */
       var cur=getSettings();
       if(cur.useGas!=='Y'){
@@ -1947,16 +1981,21 @@ async function testGas(){
         var elUG=document.getElementById('setUseGas');
         if(elUG)elUG.value='Y';
         updateGasStatusChip();
-        toast('GAS 연결 성공 → 저장 방식이 Google Sheets로 자동 전환되었습니다.');
+        toast('✅ GAS 연결 성공 → 저장 방식 Google Sheets 자동 전환');
       }else{
-        toast('GAS 연결 성공: '+data.message);
+        toast('✅ GAS 연결 성공: '+msg);
       }
       startAutoSync();
-    }else throw new Error(data.message);
+    }else{
+      /* success:false 또는 필드 없음 */
+      var errMsg=data.message||data.msg||data.error||'Apps Script에서 실패 응답을 반환했습니다. Code.gs action=test 응답 형식을 확인해 주세요.';
+      throw new Error(errMsg);
+    }
   }catch(e){
     document.getElementById('connState').className='chip red';
     document.getElementById('connState').textContent='❌ 연결 실패';
-    showAlert('연결 실패',e.message);
+    var displayMsg=e.message||'알 수 없는 오류 — 콘솔(F12)을 확인해 주세요.';
+    showAlert('연결 실패',displayMsg.replace(/\n/g,'<br>'));
   }finally{showLoad(false);}
 }
 
@@ -1968,19 +2007,33 @@ function updateSyncChip(){
 async function syncMasterSilent(){
   var s=getSettings();
   if(s.useGas!=='Y') return;
-  var res=await fetch((s.gasUrl||CONFIG.GAS_URL)+'?action=getMasterItems');
-  var data=await res.json();
-  if(data.success&&data.items){ setMaster(data.items); }
-  lsSet(KEYS.SYNC,new Date().toISOString());
+  var url=(s.gasUrl||CONFIG.GAS_URL||'').trim();
+  if(!url) return;
+  try{
+    var res=await fetch(url+'?action=getMasterItems',{method:'GET'});
+    if(!res.ok) return;
+    var rawText=await res.text();
+    var data;
+    try{data=JSON.parse(rawText);}catch(e){return;}
+    if(data.success&&Array.isArray(data.items)&&data.items.length){setMaster(data.items);}
+    lsSet(KEYS.SYNC,new Date().toISOString());
+  }catch(e){/* silent */}
 }
 
 async function syncTxSilent(){
   var s=getSettings();
   if(s.useGas!=='Y') return;
-  var res=await fetch((s.gasUrl||CONFIG.GAS_URL)+'?action=getTransactions');
-  var data=await res.json();
-  if(data.success&&data.transactions){ setTx(data.transactions); }
-  lsSet(KEYS.SYNC,new Date().toISOString());
+  var url=(s.gasUrl||CONFIG.GAS_URL||'').trim();
+  if(!url) return;
+  try{
+    var res=await fetch(url+'?action=getTransactions',{method:'GET'});
+    if(!res.ok) return;
+    var rawText=await res.text();
+    var data;
+    try{data=JSON.parse(rawText);}catch(e){return;}
+    if(data.success&&Array.isArray(data.transactions)&&data.transactions.length){setTx(data.transactions);}
+    lsSet(KEYS.SYNC,new Date().toISOString());
+  }catch(e){/* silent */}
 }
 
 async function syncMasterNow(){
