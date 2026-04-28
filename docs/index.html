@@ -1,4 +1,4 @@
-!DOCTYPE html>
+<!DOCTYPE html>
 <!--
 ┌──────────────────────────────────────────────────────────┐
 │  스마트공장 재고·물류관리 시스템 v10 (납품형 마스터본)   │
@@ -561,6 +561,123 @@ tr:hover td{background:#fafbfc}
 /* ── 430px 초과 — 탭바·추가 CSS 숨김 ── */
 @media(min-width:431px){
   #mobileTabBar{display:none!important}
+}
+
+/* ══════════════════════════════════════════════
+   모바일 UI 마감 패치 — v20260428
+   ※ CSS ONLY / JS·GAS·기능 로직 일절 수정 없음
+   ══════════════════════════════════════════════ */
+
+/* ── 768px 이하 전체 가로 오버플로 차단 ── */
+@media(max-width:768px){
+  html,body{
+    width:100%;
+    max-width:100%;
+    overflow-x:hidden!important;
+  }
+  *{box-sizing:border-box}
+
+  /* 앱 레이아웃 전체 너비 고정 */
+  #appWrap,
+  .layout,
+  .main,
+  .content,
+  .tab,
+  .card,
+  .toolbar,
+  .grid2,
+  .settings-grid{
+    width:100%!important;
+    max-width:100%!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    transform:none!important;
+  }
+
+  /* 사이드바: 모바일에서 완전 숨김 */
+  .side{display:none!important}
+
+  /* 메인 영역이 사이드바 없이 전체 사용 */
+  .main{flex:1!important;min-width:0!important}
+
+  /* 콘텐츠 패딩 균일화 + 하단 탭바 겹침 방지 */
+  .content{
+    padding:12px 12px 90px!important;
+    overflow-x:hidden!important;
+  }
+
+  /* 테이블 래퍼 — 가로 스크롤 허용, 넘침 차단 */
+  .tbl-wrap,
+  .card-bd.tbl-wrap{
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:auto!important;
+  }
+
+  /* 하단 탭바 좌우 풀폭 고정 */
+  #mobileTabBar{
+    left:0!important;
+    right:0!important;
+    width:100%!important;
+    max-width:100%!important;
+  }
+
+  /* 재고조회 / 부족 탭 inline min-width 무력화 */
+  #tab-stock,
+  #tab-short,
+  #tab-stock .card,
+  #tab-short .card,
+  #tab-stock .toolbar,
+  #tab-short .toolbar{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+
+  /* 툴바 내 search-field inline min-width 무력화 */
+  .search-field[style*="min-width"],
+  .toolbar .fg[style*="min-width"]{
+    min-width:0!important;
+  }
+
+  /* 대시보드 상단 불필요 안내·디버그 문구 숨김 */
+  .dashboard-notice,
+  .debug-banner,
+  .sync-debug,
+  .dev-banner,
+  .status-debug,
+  .top-message,
+  .system-message,
+  .sample-notice{
+    display:none!important;
+  }
+}
+
+/* ── 430px 이하 보완 패치 ── */
+@media(max-width:430px){
+  /* content 패딩 소형 폰 기준 */
+  .content{
+    padding:10px 10px 90px!important;
+  }
+
+  /* KPI 그리드 너비 보정 */
+  .kpi-row{
+    width:100%!important;
+    max-width:100%!important;
+    gap:10px!important;
+  }
+
+  /* 재고조회/부족 페이지 자식 요소 모두 풀폭 */
+  #tab-stock > *,
+  #tab-short > *{
+    max-width:100%!important;
+    min-width:0!important;
+  }
+
+  /* 이력 검색 패널 내 min-width 인라인 무력화 */
+  .search-fields .search-field{
+    min-width:0!important;
+  }
 }
 </style>
 
