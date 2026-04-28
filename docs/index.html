@@ -679,6 +679,89 @@ tr:hover td{background:#fafbfc}
     min-width:0!important;
   }
 }
+
+/* ══════════════════════════════════════════════
+   입출고 이력 검색 패널 모바일 2차 마감 — v20260428-hist
+   ※ CSS ONLY / JS·GAS·기능 로직 일절 수정 없음
+   ══════════════════════════════════════════════ */
+@media(max-width:430px){
+  /* 검색 패널 컨테이너 */
+  #tab-hist .search-panel{
+    width:100%!important;
+    max-width:100%!important;
+    padding:14px!important;
+    overflow:hidden!important;
+  }
+
+  /* 검색 필드 2열 그리드 */
+  #tab-hist .search-fields{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:10px!important;
+    width:100%!important;
+  }
+
+  /* 개별 검색 필드 */
+  #tab-hist .search-field{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+  }
+
+  /* 검색 필드 내 input / select */
+  #tab-hist .search-field input,
+  #tab-hist .search-field select{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+
+  /* 날짜 행 — 2열 그리드로 시작일/종료일 나란히 */
+  #tab-hist .date-row{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:10px!important;
+    width:100%!important;
+    align-items:start!important;
+  }
+  #tab-hist .date-row .search-field{
+    flex:none!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+
+  /* 빠른 기간 버튼 — 날짜 행 아래 전체 폭 */
+  #tab-hist .date-row .quick-btns{
+    grid-column:1 / -1!important;
+    width:100%!important;
+    display:flex!important;
+    flex-wrap:wrap!important;
+    gap:8px!important;
+  }
+  #tab-hist .quick-btn{
+    flex:1 1 calc(50% - 8px)!important;
+    min-width:0!important;
+  }
+
+  /* 액션 행 전체 폭 */
+  #tab-hist .action-row{
+    width:100%!important;
+  }
+
+  /* 조회/초기화, 엑셀/CSV 버튼 2열 그리드 */
+  #tab-hist .action-row-left,
+  #tab-hist .action-row-right{
+    width:100%!important;
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+  }
+  #tab-hist .action-row-left .btn,
+  #tab-hist .action-row-right .btn{
+    width:100%!important;
+    min-width:0!important;
+  }
+}
 </style>
 
   <!-- v8: Skywork 배지 완전 제거 -->
