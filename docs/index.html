@@ -16,7 +16,7 @@
 <title>KY 재고관리</title>
 
 <!-- 안정형 PWA 설정 -->
-<link rel="manifest" href="./manifest.json">
+<link rel="manifest" href="https://raw.githubusercontent.com/placeholder/manifest.json">
 <meta name="theme-color" content="#2563eb">
 <meta name="background-color" content="#ffffff">
 
@@ -28,8 +28,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="KY 재고관리">
-<link rel="apple-touch-icon" href="./icons/icon-192.png">
-<link rel="apple-touch-icon" sizes="512x512" href="./icons/icon-512.png">
+<link rel="apple-touch-icon" href="https://placeholder/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="https://placeholder/icon-512.png">
 
 
 <!-- 흰색 기준 PWA 초기 배경 안정화 -->
@@ -43,8 +43,8 @@
 </style>
 
 <!-- 기본 파비콘 -->
-<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
-<link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png">
+<link rel="icon" type="image/png" sizes="192x192" href="https://placeholder/icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="https://placeholder/icon-512.png">
 
 
 <style>
@@ -959,7 +959,11 @@ tr:hover td{background:#fafbfc}
                   <div class="fg"><label>일시</label><input id="txDate" type="datetime-local"></div>
                 </div>
                 <div class="frow">
-                  <div class="fg"><label>품목코드 (바코드)</label><input id="txCode" placeholder="코드 / 바코드 스캔"></div>
+                  <div class="fg ac-wrap">
+                    <label>품목코드 (바코드)</label>
+                    <input id="txCode" placeholder="코드 / 바코드 스캔" autocomplete="off" oninput="onCodeInput(this.value,'tx')">
+                    <div class="ac-list" id="acListCode"></div>
+                  </div>
                   <div class="fg ac-wrap">
                     <label>품목명 <span style="color:#2563eb;font-size:11px">↓ 자동완성</span></label>
                     <input id="txName" placeholder="품목명 입력" autocomplete="off" oninput="onNameInput(this.value)">
@@ -1183,8 +1187,16 @@ tr:hover td{background:#fafbfc}
               <div class="card-bd">
                 <input type="hidden" id="mIdx">
                 <div class="frow">
-                  <div class="fg"><label>품목코드</label><input id="mCode"></div>
-                  <div class="fg"><label>품목명</label><input id="mName"></div>
+                  <div class="fg ac-wrap">
+                    <label>품목코드</label>
+                    <input id="mCode" autocomplete="off" oninput="onCodeInput(this.value,'m')">
+                    <div class="ac-list" id="mAcListCode"></div>
+                  </div>
+                  <div class="fg ac-wrap">
+                    <label>품목명</label>
+                    <input id="mName" autocomplete="off" oninput="onMNameInput(this.value)">
+                    <div class="ac-list" id="mAcListName"></div>
+                  </div>
                 </div>
                 <div class="frow3">
                   <div class="fg"><label>규격</label><input id="mSpec"></div>
@@ -2009,19 +2021,68 @@ function onQtyInput(){
   if(typ==='출고'&&qty>cur){box.className='stock-prev show danger';err.classList.add('show');}
   else{box.className='stock-prev show'+(typ==='출고'&&cur<=item.safety?' warn':'');err.classList.remove('show');}
 }
+/* ── 자동완성 공통: 후보 목록 렌더 ── */
+function renderAcList(listEl,items,onSelect){
+  if(!items.length){listEl.classList.remove('open');return;}
+  listEl.innerHTML=items.map(function(m){
+    var sc=(m.code||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    var sn=(m.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return '<div class="ac-item" onclick="'+onSelect+'(\''+sc+'\',\''+sn+'\')">'+'<b>'+(m.name||'')+'</b><span>'+(m.code||'')+(m.spec?' · '+m.spec:'')+(m.unit?' ['+m.unit+']':'')+'</span></div>';
+  }).join('');
+  listEl.classList.add('open');
+}
+/* ── 품목코드 입력 자동완성 (입출고 ctx='tx' / 품목등록 ctx='m') ── */
+function onCodeInput(v,ctx){
+  var listId=ctx==='tx'?'acListCode':'mAcListCode';
+  var list=document.getElementById(listId);if(!list)return;
+  if(!v){list.classList.remove('open');return;}
+  var hits=getMaster().filter(function(m){return(m.code||'').indexOf(v)>=0||(m.name||'').indexOf(v)>=0;}).slice(0,8);
+  renderAcList(list,hits,ctx==='tx'?'selectAcTx':'selectAcM');
+}
+/* ── 품목등록: 품목명 입력 자동완성 ── */
+function onMNameInput(v){
+  var list=document.getElementById('mAcListName');if(!list)return;
+  if(!v){list.classList.remove('open');return;}
+  var hits=getMaster().filter(function(m){return(m.name||'').indexOf(v)>=0||(m.code||'').indexOf(v)>=0;}).slice(0,8);
+  renderAcList(list,hits,'selectAcM');
+}
+/* ── 입출고등록: 품목명 입력 자동완성 (기존 onNameInput 강화) ── */
 function onNameInput(v){
   var list=document.getElementById('acList');if(!v){list.classList.remove('open');return;}
-  var items=getMaster().filter(function(m){return m.name.indexOf(v)>=0||m.code.indexOf(v)>=0;}).slice(0,8);
-  if(!items.length){list.classList.remove('open');return;}
-  list.innerHTML=items.map(function(m){return '<div class="ac-item" onclick="selectAc(\''+m.code.replace(/'/g,"\\'")+"','"+( m.name||'').replace(/'/g,"\\'")+'\')" ><b>'+(m.name||'')+'</b><span>'+(m.code||'')+' '+(m.spec||'')+'</span></div>';}).join('');
-  list.classList.add('open');
+  var items=getMaster().filter(function(m){return(m.name||'').indexOf(v)>=0||(m.code||'').indexOf(v)>=0;}).slice(0,8);
+  renderAcList(list,items,'selectAcTx');
 }
-function selectAc(code,name){
-  document.getElementById('txCode').value=code;document.getElementById('txName').value=name;
+/* ── 입출고등록: 품목 선택 → txCode/txName 채움 ── */
+function selectAcTx(code,name){
+  document.getElementById('txCode').value=code;
+  document.getElementById('txName').value=name;
   document.getElementById('acList').classList.remove('open');
+  var cl=document.getElementById('acListCode');if(cl)cl.classList.remove('open');
   showStockPrev(code);onQtyInput();
 }
-document.addEventListener('click',function(e){if(!e.target.closest('.ac-wrap'))document.getElementById('acList').classList.remove('open');});
+/* ── 입출고등록: 하위호환용 래퍼 ── */
+function selectAc(code,name){selectAcTx(code,name);}
+/* ── 품목등록: 품목 선택 → mCode/mName/mSpec/mUnit/mSafety 전부 채움 ── */
+function selectAcM(code,name){
+  var m=getMaster().filter(function(r){return r.code===code;})[0];
+  document.getElementById('mCode').value=code;
+  document.getElementById('mName').value=name;
+  if(m){
+    document.getElementById('mSpec').value=m.spec||'';
+    document.getElementById('mUnit').value=m.unit||'EA';
+    document.getElementById('mSafety').value=m.safety||0;
+  }
+  var cl=document.getElementById('mAcListCode'),nl=document.getElementById('mAcListName');
+  if(cl)cl.classList.remove('open');if(nl)nl.classList.remove('open');
+}
+/* ── 외부 클릭 시 모든 ac-list 닫기 ── */
+document.addEventListener('click',function(e){
+  if(!e.target.closest('.ac-wrap')){
+    ['acList','acListCode','mAcListCode','mAcListName'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.classList.remove('open');
+    });
+  }
+});
 
 async function saveTx(){
   var row={
