@@ -2554,17 +2554,16 @@ function renderMaster(){
       +'<td>'+(r.unit||'')+'</td>'
       +'<td class="r">'+fmt(r.safety)+'</td>'
       +'<td><div style="display:flex;gap:6px">'
-      +'<button class="btn sec mst-edit-btn" style="font-size:12px;padding:5px 10px">수정</button>'
-      +'<button class="btn dan mst-del-btn" style="font-size:12px;padding:5px 10px">삭제</button>'
+      +'<button class="btn sec mst-edit-btn" data-code="'+safeCode+'" style="font-size:12px;padding:5px 10px">수정</button>'
+      +'<button class="btn dan mst-del-btn" data-code="'+safeCode+'" style="font-size:12px;padding:5px 10px">삭제</button>'
       +'</div></td></tr>';
   }).join('');
   /* 이벤트 위임 — onclick 인라인 속성 완전 제거로 이스케이프 문제 원천 차단 */
   tbody.onclick=function(ev){
     var btn=ev.target.closest('button');
     if(!btn)return;
-    var tr=btn.closest('tr[data-mcode]');
-    if(!tr)return;
-    var code=tr.getAttribute('data-mcode');
+    var code=btn.getAttribute('data-code');
+    if(!code)return;
     if(btn.classList.contains('mst-edit-btn'))editMaster(code);
     else if(btn.classList.contains('mst-del-btn'))delMaster(code);
   };
