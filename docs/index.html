@@ -2552,9 +2552,27 @@ function renderMaster(){
   var rows=getMaster();
   document.getElementById('masterCnt').textContent=rows.length+'품목';
   document.getElementById('masterTbody').innerHTML=rows.length
-    /* ★ 버그수정: onclick에 인덱스 대신 품목코드(고유값) 전달 */
-    ?rows.map(function(r){var esc=r.code.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return '<tr><td>'+r.code+'</td><td>'+r.name+'</td><td>'+(r.spec||'')+'</td><td>'+(r.unit||'')+'</td><td class="r">'+fmt(r.safety)+'</td><td><div style="display:flex;gap:6px"><button class="btn sec" style="font-size:12px;padding:5px 10px" onclick="editMaster(\''+esc+'\')">수정</button><button class="btn dan" style="font-size:12px;padding:5px 10px" onclick="delMaster(\''+esc+'\')">삭제</button></div></td></tr>';}).join('')
+    ?rows.map(function(r){
+      return '<tr data-code="'+r.code.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">'
+        +'<td>'+r.code+'</td><td>'+r.name+'</td><td>'+(r.spec||'')+'</td><td>'+(r.unit||'')+'</td>'
+        +'<td class="r">'+fmt(r.safety)+'</td>'
+        +'<td><div style="display:flex;gap:6px">'
+        +'<button class="btn sec mst-edit" style="font-size:12px;padding:5px 10px">수정</button>'
+        +'<button class="btn dan mst-del" style="font-size:12px;padding:5px 10px">삭제</button>'
+        +'</div></td></tr>';
+    }).join('')
     :'<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px">품목이 없습니다</td></tr>';
+  /* ★ 이벤트 위임: tbody 단일 리스너로 수정/삭제 처리 — 이스케이프 문제 완전 제거 */
+  var tbody=document.getElementById('masterTbody');
+  tbody.onclick=function(e){
+    var btn=e.target.closest('button');
+    if(!btn)return;
+    var tr=btn.closest('tr');
+    if(!tr)return;
+    var code=tr.getAttribute('data-code');
+    if(btn.classList.contains('mst-edit'))editMaster(code);
+    else if(btn.classList.contains('mst-del'))delMaster(code);
+  };
 }
 
 /* ─── 통계 (입고금액 / 출고금액 컬럼 추가) ─── */
