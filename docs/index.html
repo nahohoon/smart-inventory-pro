@@ -799,11 +799,8 @@ tr:hover td{background:#fafbfc}
 
   <!-- v8: Skywork 배지 완전 제거 -->
   <style>
-    #skywork-badge,
-    [id*="skywork"],
-    [class*="skywork-badge"],
-    [id*="sw-badge"],
-    [class*="sw-badge"] {
+    #skywork-badge,[id*="skywork"],[class*="skywork-badge"],
+    [id*="sw-badge"],[class*="sw-badge"] {
       display: none !important;
       visibility: hidden !important;
       opacity: 0 !important;
@@ -961,7 +958,8 @@ tr:hover td{background:#fafbfc}
                 <div class="frow">
                   <div class="fg ac-wrap">
                     <label>품목코드 (바코드)</label>
-                    <input id="txCode" placeholder="코드 / 바코드 스캔" autocomplete="off" oninput="onCodeInput(this.value,'tx')">
+                    <!-- ★ 바코드 입력 시 즉시 연동 및 Enter 키 동작 처리 추가 -->
+                    <input id="txCode" placeholder="코드 / 바코드 스캔" autocomplete="off" oninput="onCodeInput(this.value,'tx')" onkeydown="if(event.key==='Enter'){event.preventDefault(); onCodeEnter(this.value,'tx');}">
                     <div class="ac-list" id="acListCode"></div>
                   </div>
                   <div class="fg ac-wrap">
@@ -1250,7 +1248,7 @@ tr:hover td{background:#fafbfc}
                 <div class="fg"><label>관리자 연락처 (선택)</label><input id="setContact" placeholder="예: 010-0000-0000"></div>
                 <div class="set-sec-title" style="margin-top:2px">기본값</div>
                 <div class="fg"><label>기본 담당자</label><input id="setMgr"></div>
-                <div class="fg"><label>기본 정장</label><select id="setWh"></select></div>
+                <div class="fg"><label>기본 창고</label><select id="setWh"></select></div>
                 <div class="fg"><label>페이지당 건수</label><select id="setPgSz"><option value="20">20건</option><option value="50">50건</option><option value="100">100건</option></select></div>
                 <div class="btns"><button class="btn pri" onclick="saveSettings()">&#128190; 설정 저장 · 즉시 반영</button></div>
               </div>
@@ -1413,8 +1411,8 @@ var CONFIG = {
   FOOTER: 'Powered by Smart Factory ERP',
   CONTACT: '',
   GAS_URL: 'https://script.google.com/macros/s/AKfycbwkvK3UdQVAm8L7B4fM-P_24hbmkGUCzgjFiNb6ne0bVmjJ37NWDOHRx_kfhWsbGnitmg/exec',
-  WAREHOUSES: ['성서공장', '현풍공장'],
-  USERS: [
+  WAREHOUSES:['성서공장', '현풍공장'],
+  USERS:[
     { id: 'admin',  pw: 'ky1234', name: '관리자',  role: 'admin'  },
     { id: 'staff1', pw: '1234',   name: '담당자1', role: 'staff'  },
     { id: 'view1',  pw: '1234',   name: '조회자1', role: 'viewer' }
@@ -1424,7 +1422,7 @@ var CONFIG = {
     primary:'#2563eb', accent:'#16a34a', amber:'#d97706',
     sideTop:'#0f2747', sideBtm:'#1a3a6b', loginTop:'#0a1628'
   },
-  SEED_ITEMS: [
+  SEED_ITEMS:[
     { code: 'ITEM-001', name: '콤프레샤 필터',     spec: 'A형',      unit: 'EA',  safety: 10 },
     { code: 'ITEM-002', name: '에어호스',           spec: '10M',      unit: 'EA',  safety: 8  },
     { code: 'ITEM-003', name: '압력게이지',         spec: '100psi',   unit: 'EA',  safety: 5  },
@@ -1764,23 +1762,23 @@ function saveSettings(){
   });
   applyBrand();toast('설정 저장 완료');try{startAutoSync();}catch(e){}
 }
-/* \u2500\u2500\u2500 \ucf5c\ub7ec picker \ud5ec\ud37c \u2500\u2500\u2500 */
+/* ─ 컬러 picker 헬퍼 ─ */
 function syncColor(colorId,txtId){var el=document.getElementById(colorId),el2=document.getElementById(txtId);if(el&&el2)el2.value=el.value;}
 function syncColorTxt(txtId,colorId){var el=document.getElementById(txtId),el2=document.getElementById(colorId);if(!el||!el2)return;var v=el.value;if(/^#[0-9a-fA-F]{6}$/.test(v))el2.value=v;}
 
-/* \u2500\u2500\u2500 \uc774\ubbf8\uc9c0 \ub85c\uace0 \u2500\u2500\u2500 */
+/* ─ 이미지 로고 ─ */
 function onLogoUpload(e){
   var file=e.target.files&&e.target.files[0];
   if(!file)return;
-  if(file.size>512*1024){toast('\ub85c\uace0 \ud30c\uc77c\uc740 512KB \uc774\ud558\ub85c \uc0ac\uc6a9\ud558\uc138\uc694');return;}
+  if(file.size>512*1024){toast('로고 파일은 512KB 이하로 사용하세요');return;}
   var reader=new FileReader();
   reader.onload=function(ev){
-    try{localStorage.setItem(KEYS.LOGO,ev.target.result);}catch(ex){toast('\ub85c\uace0 \uc800\uc7a5 \uc2e4\ud328(\uc6a9\ub7c9 \ucd08\uacfc)');}
+    try{localStorage.setItem(KEYS.LOGO,ev.target.result);}catch(ex){toast('로고 저장 실패(용량 초과)');}
     var prev=document.getElementById('logoPreviewImg');
     var hint=document.getElementById('logoUploadHint');
     if(prev){prev.src=ev.target.result;prev.style.display='block';}
     if(hint)hint.style.display='none';
-    applyBrand();toast('\ub85c\uace0 \uc774\ubbf8\uc9c0 \uc801\uc6a9 \uc644\ub8cc');
+    applyBrand();toast('로고 이미지 적용 완료');
   };
   reader.readAsDataURL(file);
 }
@@ -1792,7 +1790,7 @@ function removeLogoImg(){
   if(prev){prev.src='';prev.style.display='none';}
   if(hint)hint.style.display='';
   if(inp)inp.value='';
-  applyBrand();toast('\ub85c\uace0 \uc774\ubbf8\uc9c0 \uc81c\uac70');
+  applyBrand();toast('로고 이미지 제거');
 }
 function initLogoPreview(){
   var img=null;try{img=localStorage.getItem(KEYS.LOGO);}catch(e){}
@@ -1803,7 +1801,7 @@ function initLogoPreview(){
   if(hint)hint.style.display='none';
 }
 
-/* \u2500\u2500\u2500 \ud14c\ub9c8 \uc2e4\uc2dc\uac04 \ubbf8\ub9ac\ubcf4\uae30 \u2500\u2500\u2500 */
+/* ─ 테마 실시간 미리보기 ─ */
 function previewTheme(){
   var th={
     primary:document.getElementById('setClrPrimary').value,
@@ -1825,7 +1823,7 @@ function resetTheme(){
   sv('setClrSideTop',th.sideTop); sv2('setClrSideTopTxt',th.sideTop);
   sv('setClrSideBtm',th.sideBtm); sv2('setClrSideBtmTxt',th.sideBtm);
   sv('setClrLoginTop',th.loginTop);sv2('setClrLoginTopTxt',th.loginTop);
-  applyCssVars(th);toast('\uae30\ubcf8 \ud14c\ub9c8\ub85c \ubcf5\uc6d0\ub428');
+  applyCssVars(th);toast('기본 테마로 복원됨');
 }
 
 function initWhSelects(){
@@ -1866,15 +1864,11 @@ function calcStock(){
   return{rows:rows,low:low,inToday:inT,outToday:outT,totalStock:rows.reduce(function(s,r){return s+r.total;},0),whTotals:whTot,recent:txList.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).slice(0,8),txRaw:txList};
 }
 
-/* ══ ★ 핵심 함수: 이력에 누적 현재재고 계산 추가 ══
-   txList를 시간 순 정렬 후, 품목+창고별 누적 합산.
-   각 행에 runningStock(해당 창고 기준) 필드를 부여.  */
 /* ── 날짜 파싱 헬퍼: 파싱 실패 시 0(Epoch) 반환, 행 누락 없음 ── */
 function _parseDate(v){
   if(!v) return 0;
   var d = new Date(v);
   if(!isNaN(d)) return d.getTime();
-  /* 구글시트 한국어 형식 "2024. 1. 15." 또는 "2024. 1. 15 오전 10:30" 변환 시도 */
   var s = String(v)
     .replace(/오전\s*/,'').replace(/오후\s*/g,'')
     .replace(/\s*\./g,'-').replace(/[-\s]+$/,'').trim();
@@ -1882,19 +1876,13 @@ function _parseDate(v){
   return isNaN(d2) ? 0 : d2.getTime();
 }
 
-/* ── isoD: 날짜문자열을 YYYY-MM-DD 형식으로 정규화
-   ★ 핑스: 구글시트 한국어 형식("2025. 4. 27.") 등도안전하게 정규화해서
-   날짜 필터(d >= df 마지막에서) 작동하도록 수정 ── */
 function isoD(v){
   if(!v) return '';
-  /* 이미 YYYY-MM-DD 또는 YYYY-MM-DD... 형식이면 또는 ISO이면 앞 10자리 바로 자르기 */
   var s = String(v);
   if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
-  /* 그 외 형식은 _parseDate로 파싱 후 toISOString */
   var t = _parseDate(v);
   if(!t) return '';
   var d = new Date(t);
-  /* UTC가 아닌 로컈 날짜로 슬라이싱 */
   var y  = d.getFullYear();
   var mo = String(d.getMonth()+1).padStart(2,'0');
   var dy = String(d.getDate()).padStart(2,'0');
@@ -1903,9 +1891,7 @@ function isoD(v){
 
 function buildHistWithStock(txList){
   var WH=CONFIG.WAREHOUSES;
-  /* 누적 재고 계산을 위해 오름차순(과거→최신) 정렬 — NaN 날짜는 0(Epoch)으로 처리해 행 누락 방지 */
   var sorted=txList.slice().sort(function(a,b){ return _parseDate(a.date) - _parseDate(b.date); });
-  // 품목+창고별 누적 재고 누산기
   var stockMap={};
   sorted.forEach(function(r){
     var wk=WH.indexOf(r.warehouse)>=0?r.warehouse:WH[0];
@@ -1973,7 +1959,7 @@ function drawSimpleBar(canvasId,labels,data,color){
   var ctx=cv.getContext('2d'),W=cv.offsetWidth||400,H=cv.height||180;
   cv.width=W;ctx.clearRect(0,0,W,H);if(!data.length)return;
   var maxV=Math.max.apply(null,data.concat([1])),pad={l:10,r:10,t:10,b:30},bW=(W-pad.l-pad.r)/data.length;
-  data.forEach(function(v,i){var x=pad.l+i*bW+bW*.1,bw=bW*.8,h=(v/maxV)*(H-pad.t-pad.b);ctx.fillStyle=color||'#2563eb';ctx.fillRect(x,H-pad.b-h,bw,h);ctx.fillStyle='#94a3b8';ctx.font='9px sans-serif';ctx.textAlign='center';var lbl=labels[i]||'';ctx.fillText(lbl.length>6?lbl.slice(0,6)+'…':lbl,x+bw/2,H-4);});
+  data.forEach(function(v,i){var x=pad.l+i*bW+bW*.1,bw=bW*.8,h=(v/maxV)*(H-pad.t-pad.b);ctx.fillStyle=color||'#2563eb';ctx.fillRect(x,H-pad.b-h,bw,h);ctx.fillStyle='#94a3b8';ctx.font='9px sans-serif';ctx.textAlign='center';var lbl=labels[i]||'';ctx.fillText(lbl.length>6?lbl.slice(0,6)+'…',x+bw/2,H-4);});
 }
 function drawDonut(canvasId,labels,data,colors){
   var cv=document.getElementById(canvasId);if(!cv)return;
@@ -2031,14 +2017,44 @@ function renderAcList(listEl,items,onSelect){
   }).join('');
   listEl.classList.add('open');
 }
-/* ── 품목코드 입력 자동완성 (입출고 ctx='tx' / 품목등록 ctx='m') ── */
-function onCodeInput(v,ctx){
-  var listId=ctx==='tx'?'acListCode':'mAcListCode';
-  var list=document.getElementById(listId);if(!list)return;
-  if(!v){list.classList.remove('open');return;}
-  var hits=getMaster().filter(function(m){return(m.code||'').indexOf(v)>=0||(m.name||'').indexOf(v)>=0;}).slice(0,8);
-  renderAcList(list,hits,ctx==='tx'?'selectAcTx':'selectAcM');
+
+/* ── 바코드 스캐너 Enter 처리 (입출고) ── */
+function onCodeEnter(v, ctx) {
+  if (ctx === 'tx' && v) {
+    var exactMatch = getMaster().filter(function(m) { return m.code === v; })[0];
+    if (exactMatch) {
+      document.getElementById('txName').value = exactMatch.name;
+      var list = document.getElementById('acListCode');
+      if (list) list.classList.remove('open');
+      showStockPrev(exactMatch.code);
+      onQtyInput();
+      // 수량 입력창으로 포커스 이동
+      document.getElementById('txQty').focus();
+    }
+  }
 }
+
+/* ── 품목코드 입력 자동완성 (입출고 ctx='tx' / 품목등록 ctx='m') ── */
+function onCodeInput(v, ctx) {
+  var listId = ctx === 'tx' ? 'acListCode' : 'mAcListCode';
+  var list = document.getElementById(listId);
+  if (!v) { list.classList.remove('open'); return; }
+
+  var master = getMaster();
+  var hits = master.filter(function(m) {
+    return (m.code || '').indexOf(v) >= 0 || (m.name || '').indexOf(v) >= 0;
+  }).slice(0, 8);
+
+  // 정확히 일치하는 코드가 있으면 이름 자동 입력 (스캔 대응)
+  var exactMatch = master.filter(function(m) { return m.code === v.trim(); })[0];
+  if (ctx === 'tx' && exactMatch) {
+    document.getElementById('txName').value = exactMatch.name;
+    showStockPrev(exactMatch.code);
+  }
+
+  renderAcList(list, hits, ctx === 'tx' ? 'selectAcTx' : 'selectAcM');
+}
+
 /* ── 품목등록: 품목명 입력 자동완성 ── */
 function onMNameInput(v){
   var list=document.getElementById('mAcListName');if(!list)return;
@@ -2097,6 +2113,16 @@ async function saveTx(){
     site: document.getElementById('txSite').value.trim(),
     note: document.getElementById('txNote').value.trim()
   };
+  
+  // ★ 입고/출고에 따라 로컬 스토리지 데이터의 inPrice / outPrice 분리 세팅
+  if (row.type === '입고') {
+    row.inPrice = row.price;
+    row.outPrice = 0;
+  } else if (row.type === '출고') {
+    row.inPrice = 0;
+    row.outPrice = row.price;
+  }
+
   if(!row.code||!row.name||!row.qty){toast('품목코드, 품목명, 수량을 입력하세요');return;}
   if(row.type==='출고'){
     var item=calcStock().rows.filter(function(r){return r.code===row.code;})[0];
@@ -2104,10 +2130,21 @@ async function saveTx(){
   }
   var s=getSettings();
   if(s.useGas==='Y'){
-    try{showLoad(true);await gasGet(CONFIG.ACTION.SAVE_TX,row);var arr=getTx();arr.push(row);setTx(arr);await syncTxSilent();}
+    try{
+      showLoad(true);
+      await gasGet(CONFIG.ACTION.SAVE_TX,row);
+      var arr=getTx();
+      arr.push(row);
+      setTx(arr);
+      await syncTxSilent();
+    }
     catch(e){showAlert('❌ GAS 저장 실패','<code>'+e.message+'</code>');showLoad(false);return;}
     finally{showLoad(false);}
-  }else{var arr=getTx();arr.push(row);setTx(arr);}
+  }else{
+    var arr=getTx();
+    arr.push(row);
+    setTx(arr);
+  }
   resetTxForm(false);renderDash();renderRegRecent();renderHist();renderStock();renderShort();
   toast('✅ 입출고 저장 완료');
 }
@@ -2122,14 +2159,7 @@ function resetTxForm(withNow){
 
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    ★ v7 — 입출고 이력 검색·기간·다운로드 강화
-   ① 5개 개별 검색 필드 (품목명/바코드/구분/창고/현장명/담당자)
-   ② 빠른 기간 버튼 (오늘/7일/30일/이번달/전체)
-   ③ 활성 필터 태그 표시
-   ④ 결과 요약 바 (건수·수량합계·금액합계)
-   ⑤ 엑셀(xlsx) 다운로드 + CSV 다운로드
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-
-/* ─── 빠른 기간 버튼 ─── */
 var _activeQuickBtn = '';
 function setQuickDate(mode) {
   var today = new Date();
@@ -2151,9 +2181,7 @@ function setQuickDate(mode) {
     fromEl.value = y+'-'+m+'-01'; toEl.value = todayStr;
   } else if (mode === 'all') {
     fromEl.value = ''; toEl.value = '';
-  }
-  // 버튼 active 상태
-  ['qbToday','qb7','qb30','qbMonth','qbAll'].forEach(function(id) {
+  }['qbToday','qb7','qb30','qbMonth','qbAll'].forEach(function(id) {
     var el = document.getElementById(id);
     if (el) el.classList.remove('active');
   });
@@ -2164,15 +2192,13 @@ function setQuickDate(mode) {
   renderHist();
 }
 function clearQuickBtn() {
-  _activeQuickBtn = '';
-  ['qbToday','qb7','qb30','qbMonth','qbAll'].forEach(function(id) {
+  _activeQuickBtn = '';['qbToday','qb7','qb30','qbMonth','qbAll'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.classList.remove('active');
   });
 }
 
-/* ─── 활성 필터 태그 렌더링 ─── */
 function renderFilterTags(filters) {
-  var tags = [];
+  var tags =[];
   if (filters.name)  tags.push({key:'hName',  label:'품목명: '+filters.name});
   if (filters.code)  tags.push({key:'hCode',  label:'바코드: '+filters.code});
   if (filters.type)  tags.push({key:'hType',  label:'구분: '+filters.type, isSelect:true});
@@ -2190,16 +2216,13 @@ function renderFilterTags(filters) {
   document.getElementById('filterTags').innerHTML = html;
 }
 
-/* ─── 필터 실시간 반영 ─── */
 function onHistFilterChange() {
   _hPage = 1;
   renderHist();
 }
 
-/* ━━ 핵심: renderHist v7 ━━ */
 var _hPage = 1;
 function renderHist() {
-  /* 검색값 수집 */
   var name = document.getElementById('hName').value.trim().toLowerCase();
   var code = document.getElementById('hCode').value.trim().toLowerCase();
   var tp   = document.getElementById('hType').value;
@@ -2209,22 +2232,9 @@ function renderHist() {
   var df   = document.getElementById('hFrom').value;
   var dt   = document.getElementById('hTo').value;
 
-  /* ── 수정 3: getTx() 전체 건수 + 첫/마지막 행 로그 ── */
   var rawTx = getTx();
-  console.log('[renderHist] getTx count:', rawTx.length);
-  console.log('[renderHist] getTx first:', rawTx[0]);
-  console.log('[renderHist] getTx last :', rawTx[rawTx.length - 1]);
-  console.log('[renderHist] filters — name:'+name+' code:'+code+' tp:'+tp+' wh:'+wh+' df:'+df+' dt:'+dt);
-
-  /* ── 수정 7: buildHistWithStock 건수 검증 ── */
   var allWithStock = buildHistWithStock(rawTx);
-  if(allWithStock.length !== rawTx.length){
-    console.warn('[renderHist] ⚠️ buildHistWithStock 누락! getTx='+rawTx.length+' → allWithStock='+allWithStock.length);
-  } else {
-    console.log('[renderHist] buildHistWithStock count OK:', allWithStock.length);
-  }
 
-  /* 필터 적용 후 명시적 최신순 정렬 — NaN 날짜 행은 맨 뒤, 누락 없음 */
   var rows = allWithStock.slice().filter(function(r) {
     var d = isoD(r.date);
     var nameMatch = !name || (r.name||'').toLowerCase().indexOf(name) >= 0;
@@ -2239,29 +2249,21 @@ function renderHist() {
   }).sort(function(a, b){
     var ta = _parseDate(a.date), tb = _parseDate(b.date);
     if(ta === 0 && tb === 0) return 0;
-    if(ta === 0) return 1;   /* 파싱 실패 → 맨 뒤 */
+    if(ta === 0) return 1;
     if(tb === 0) return -1;
-    return tb - ta;           /* 최신순(내림차순) */
+    return tb - ta;
   });
 
-  /* ── 수정 4: 필터 후 rows 건수 + 첫/마지막 행 로그 ── */
-  console.log('[renderHist] rows after filter+sort count:', rows.length);
-  console.log('[renderHist] rows first (should be newest):', rows[0]);
-  console.log('[renderHist] rows last  (should be oldest):', rows[rows.length - 1]);
-
-  /* 합계 계산 */
   var inSum   = 0, outSum  = 0, inAmt  = 0, outAmt = 0;
   rows.forEach(function(r) {
-    if (r.type === '입고') { inSum  += Number(r.qty||0); inAmt  += Number(r.price||0) * Number(r.qty||0); }
-    else                   { outSum += Number(r.qty||0); outAmt += Number(r.price||0) * Number(r.qty||0); }
+    if (r.type === '입고') { inSum  += Number(r.qty||0); inAmt  += Number(r.inPrice||r.price||0) * Number(r.qty||0); }
+    else                   { outSum += Number(r.qty||0); outAmt += Number(r.outPrice||r.price||0) * Number(r.qty||0); }
   });
 
-  /* 헤더 칩 */
   document.getElementById('histCnt').textContent    = rows.length + '건';
   document.getElementById('histInSum').textContent  = '입고 ' + fmt(inSum) + '건';
   document.getElementById('histOutSum').textContent = '출고 ' + fmt(outSum) + '건';
 
-  /* 결과 요약 바 */
   var hasFilter = name||code||tp||wh||site||mgr||df||dt;
   var rb = document.getElementById('resultBar');
   rb.style.display = hasFilter ? 'flex' : 'none';
@@ -2273,23 +2275,20 @@ function renderHist() {
     document.getElementById('rbOutAmt').textContent = outAmt ? fmtPrice(outAmt) : '-';
   }
 
-  /* 활성 필터 태그 */
   renderFilterTags({ name:document.getElementById('hName').value.trim(), code:document.getElementById('hCode').value.trim(), type:tp, wh:wh, site:document.getElementById('hSite').value.trim(), mgr:document.getElementById('hMgr').value.trim(), from:df, to:dt });
 
-  /* 페이징 */
   var ps  = Number(getSettings().pageSize || 20);
   var tp2 = Math.ceil(rows.length / ps) || 1;
   if (_hPage > tp2) _hPage = tp2;
   var pg = rows.slice((_hPage - 1) * ps, _hPage * ps);
 
-  /* 테이블 렌더 */
   document.getElementById('histTbody').innerHTML = pg.length
     ? pg.map(function(r) {
         var dt2 = new Date(r.date);
         var ds  = isNaN(dt2) ? r.date : dt2.toLocaleString('ko-KR', {year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
         var isIn = r.type === '입고';
-        var priceInCell  = isIn  && r.price ? '<span class="price-in">' +fmt(r.price)+'원</span>' : '<span class="price-none">-</span>';
-        var priceOutCell = !isIn && r.price ? '<span class="price-out">'+fmt(r.price)+'원</span>' : '<span class="price-none">-</span>';
+        var priceInCell  = isIn  && (r.inPrice||r.price) ? '<span class="price-in">' +fmt(r.inPrice||r.price)+'원</span>' : '<span class="price-none">-</span>';
+        var priceOutCell = !isIn && (r.outPrice||r.price) ? '<span class="price-out">'+fmt(r.outPrice||r.price)+'원</span>' : '<span class="price-none">-</span>';
         var stk     = r._runningStock != null ? r._runningStock : 0;
         var stkCls  = stk === 0 ? 'stock-zero' : stk <= 5 ? 'stock-low' : 'stock-ok';
         var stkCell = '<span class="stock-cell '+stkCls+'">'+fmt(stk)+'</span>';
@@ -2309,7 +2308,6 @@ function renderHist() {
       }).join('')
     : '<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:40px 24px;font-size:13px">📭 조회된 데이터가 없습니다</td></tr>';
 
-  /* 페이저 */
   var pager = document.getElementById('histPager');
   if (rows.length > ps) {
     var h = '<span class="pg-info">총 ' + rows.length + '건 &nbsp;/&nbsp; ' + tp2 + '페이지</span>';
@@ -2326,9 +2324,7 @@ function renderHist() {
   window._lastHistRows = rows;
 }
 
-/* ★ 수정 5: 필터만 초기화 (renderHist 호출 없음 — 호출자가 제어) */
-function resetHistFilters() {
-  ['hName','hCode','hFrom','hTo','hSite','hMgr'].forEach(function(id) {
+function resetHistFilters() {['hName','hCode','hFrom','hTo','hSite','hMgr'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
   var hTypeEl = document.getElementById('hType'); if(hTypeEl) hTypeEl.value = '';
@@ -2343,17 +2339,16 @@ function resetHist() {
   renderHist();
 }
 
-/* ─── CSV 내보내기 (11컬럼 v7) ─── */
 function exportHistCSV() {
-  var rows = window._lastHistRows || [];
+  var rows = window._lastHistRows ||[];
   if (!rows.length) { toast('내보낼 데이터 없음'); return; }
   var bom = '\uFEFF';
   var hdr = '날짜,바코드,품목명,구분,수량,입고가격,출고가격,현재재고,창고,현장명,담당자\n';
   var body = rows.map(function(r) {
     var isIn    = r.type === '입고';
-    var priceIn  = isIn  ? (r.price || 0) : '';
-    var priceOut = !isIn ? (r.price || 0) : '';
-    return [r.date, r.code, r.name, r.type, r.qty, priceIn, priceOut, r._runningStock||0, r.warehouse, r.site||'', r.manager||'']
+    var priceIn  = isIn  ? (r.inPrice||r.price || 0) : '';
+    var priceOut = !isIn ? (r.outPrice||r.price || 0) : '';
+    return[r.date, r.code, r.name, r.type, r.qty, priceIn, priceOut, r._runningStock||0, r.warehouse, r.site||'', r.manager||'']
       .map(function(v) { return '"' + String(v||'').replace(/"/g,'""') + '"'; }).join(',');
   }).join('\n');
   var blob = new Blob([bom + hdr + body], {type:'text/csv;charset=utf-8'});
@@ -2366,12 +2361,10 @@ function exportHistCSV() {
   toast('✅ CSV 다운로드 완료 (' + rows.length + '건)');
 }
 
-/* ─── 엑셀(xlsx) 다운로드 — SheetJS CDN ─── */
 function exportHistXLSX() {
-  var rows = window._lastHistRows || [];
+  var rows = window._lastHistRows ||[];
   if (!rows.length) { toast('내보낼 데이터 없음'); return; }
 
-  /* SheetJS가 로드되지 않았으면 CDN에서 동적 로드 */
   if (typeof XLSX === 'undefined') {
     toast('엑셀 라이브러리 로딩 중...');
     var s = document.createElement('script');
@@ -2388,18 +2381,17 @@ function exportHistXLSX() {
 
 function _doXLSX(rows) {
   try {
-    /* 데이터 배열 생성 */
-    var header = ['날짜','바코드','품목명','구분','수량','입고가격','출고가격','현재재고','창고','현장명','담당자'];
+    var header =['날짜','바코드','품목명','구분','수량','입고가격','출고가격','현재재고','창고','현장명','담당자'];
     var data   = [header].concat(rows.map(function(r) {
       var isIn    = r.type === '입고';
-      return [
+      return[
         r.date || '',
         r.code || '',
         r.name || '',
         r.type || '',
         Number(r.qty || 0),
-        isIn  ? Number(r.price || 0) : '',
-        !isIn ? Number(r.price || 0) : '',
+        isIn  ? Number(r.inPrice||r.price || 0) : '',
+        !isIn ? Number(r.outPrice||r.price || 0) : '',
         Number(r._runningStock || 0),
         r.warehouse || '',
         r.site      || '',
@@ -2409,13 +2401,11 @@ function _doXLSX(rows) {
 
     var ws = XLSX.utils.aoa_to_sheet(data);
 
-    /* 컬럼 너비 자동 조정 */
-    ws['!cols'] = [
+    ws['!cols'] =[
       {wch:20},{wch:14},{wch:18},{wch:6},{wch:8},
       {wch:12},{wch:12},{wch:10},{wch:10},{wch:14},{wch:10}
     ];
 
-    /* 헤더 행 스타일 (배경색) */
     var range = XLSX.utils.decode_range(ws['!ref']);
     for (var C = range.s.c; C <= range.e.c; C++) {
       var cellAddr = XLSX.utils.encode_cell({r:0, c:C});
@@ -2427,25 +2417,15 @@ function _doXLSX(rows) {
       };
     }
 
-    /* 파일명 */
     var fname  = coName()+'_입출고이력_' + isoD(new Date().toISOString()) + '.xlsx';
     var wb     = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, '입출고이력');
 
-    /* 요약 시트 */
     var inSum  = rows.filter(function(r){return r.type==='입고';}).reduce(function(s,r){return s+Number(r.qty||0);},0);
     var outSum = rows.filter(function(r){return r.type==='출고';}).reduce(function(s,r){return s+Number(r.qty||0);},0);
-    var inAmt  = rows.filter(function(r){return r.type==='입고';}).reduce(function(s,r){return s+Number(r.price||0)*Number(r.qty||0);},0);
-    var outAmt = rows.filter(function(r){return r.type==='출고';}).reduce(function(s,r){return s+Number(r.price||0)*Number(r.qty||0);},0);
-    var sumData = [
-      ['항목','값'],
-      ['다운로드 일시', new Date().toLocaleString('ko-KR')],
-      ['총 건수', rows.length],
-      ['입고 수량 합계', inSum],
-      ['출고 수량 합계', outSum],
-      ['입고 금액 합계', inAmt],
-      ['출고 금액 합계', outAmt],
-      ['순 증감 (수량)', inSum - outSum]
+    var inAmt  = rows.filter(function(r){return r.type==='입고';}).reduce(function(s,r){return s+Number(r.inPrice||r.price||0)*Number(r.qty||0);},0);
+    var outAmt = rows.filter(function(r){return r.type==='출고';}).reduce(function(s,r){return s+Number(r.outPrice||r.price||0)*Number(r.qty||0);},0);
+    var sumData = [['항목','값'],['다운로드 일시', new Date().toLocaleString('ko-KR')],['총 건수', rows.length],['입고 수량 합계', inSum],['출고 수량 합계', outSum],['입고 금액 합계', inAmt],['출고 금액 합계', outAmt],['순 증감 (수량)', inSum - outSum]
     ];
     var wsSummary = XLSX.utils.aoa_to_sheet(sumData);
     wsSummary['!cols'] = [{wch:20},{wch:20}];
@@ -2534,8 +2514,8 @@ function renderStats(){
   txList.forEach(function(r){
     var m=String(r.date||'').slice(0,7);if(!m)return;
     if(!mthMap[m])mthMap[m]={month:m,inCnt:0,inQty:0,inAmt:0,outCnt:0,outQty:0,outAmt:0};
-    if(r.type==='입고'){mthMap[m].inCnt++;mthMap[m].inQty+=Number(r.qty||0);mthMap[m].inAmt+=Number(r.price||0)*Number(r.qty||0);}
-    else{mthMap[m].outCnt++;mthMap[m].outQty+=Number(r.qty||0);mthMap[m].outAmt+=Number(r.price||0)*Number(r.qty||0);}
+    if(r.type==='입고'){mthMap[m].inCnt++;mthMap[m].inQty+=Number(r.qty||0);mthMap[m].inAmt+=Number(r.inPrice||r.price||0)*Number(r.qty||0);}
+    else{mthMap[m].outCnt++;mthMap[m].outQty+=Number(r.qty||0);mthMap[m].outAmt+=Number(r.outPrice||r.price||0)*Number(r.qty||0);}
   });
   var mths=Object.values(mthMap).sort(function(a,b){return a.month.localeCompare(b.month);});
   document.getElementById('statsTbody').innerHTML=mths.length
@@ -2546,7 +2526,6 @@ function renderStats(){
 /* ─── GAS 통신 ─── */
 function gasGet(action,params){
   return new Promise(function(resolve,reject){
-    /* ★ 항상 getGasUrl()로 URL 읽기 */
     var url=getGasUrl();
     if(!url){reject(new Error('GAS URL이 설정되지 않았습니다'));return;}
     var p=Object.assign({action:action},params||{});
@@ -2564,7 +2543,6 @@ function gasGet(action,params){
 async function testGas(){
   try{
     showLoad(true);
-    /* ★ 항상 getGasUrl()로 URL 읽기 */
     var url = getGasUrl();
     if(!url){ throw new Error('GAS URL이 설정되지 않았습니다. URL 입력 후 [저장] 버튼을 먼저 눌러주세요.'); }
 
@@ -2574,7 +2552,6 @@ async function testGas(){
     if(data && data.success){
       document.getElementById('connState').className='chip green';
       document.getElementById('connState').textContent='✅ 연결 정상';
-      /* ★ undefined 방지: message가 없을 때 기본 문구 */
       var msg = (data.message && data.message !== 'undefined') ? data.message : '연결 정상';
       toast('✅ GAS 연결 성공: ' + msg);
     }else{
@@ -2607,19 +2584,14 @@ function normalizeMasterItem(r){
 }
 
 function normalizeTxRow(r){
-  /* ★ 수정 7: GAS 응답 필드명 완전 대응 (barcode/code, itemName/name,
-     quantity/qty, wh/warehouse, siteName/site, inPrice/outPrice/currentStock/stock) */
   var type = String(r.type || '').trim();
   var inP  = Number(r.inPrice  || r.in_price  || 0);
   var outP = Number(r.outPrice || r.out_price || 0);
-  /* qty: qty 또는 quantity 모두 허용 */
   var qty  = Number(r.qty || r.quantity || 0);
-  /* warehouse: warehouse → wh → '' */
   var wh   = String(r.warehouse || r.wh || '').trim();
-  /* site: site → siteName → '' */
   var site = String(r.site || r.siteName || r.site_name || '').trim();
-  /* currentStock: currentStock → stock → 0 */
   var curStock = Number(r.currentStock || r.current_stock || r.stock || 0);
+  
   return {
     date:         r.date || '',
     code:         String(r.code || r.barcode || '').trim(),
@@ -2641,15 +2613,10 @@ function normalizeTxRow(r){
 async function syncMasterSilent(){
   var s=getSettings();
   if(s.useGas!=='Y') return;
-  /* ★ 항상 getGasUrl()로 URL 읽기 */
   var res=await fetch(getGasUrl()+'?action=getMasterItems');
   var data=await res.json();
 
-  console.log('getMasterItems raw response:', data);
-
-  var items = data.items || data.data || data.masterItems || [];
-
-  console.log('master items count:', items.length);
+  var items = data.items || data.data || data.masterItems ||[];
 
   if(!Array.isArray(items)){
     throw new Error('품목 데이터 형식 오류');
@@ -2660,7 +2627,6 @@ async function syncMasterSilent(){
 
   var normalized = items.map(normalizeMasterItem);
   setMaster(normalized);
-  console.log('saved master count:', getMaster().length);
 
   lsSet(KEYS.SYNC,new Date().toISOString());
 }
@@ -2668,16 +2634,10 @@ async function syncMasterSilent(){
 async function syncTxSilent(){
   var s=getSettings();
   if(s.useGas!=='Y') return;
-  /* ★ 항상 getGasUrl()로 URL 읽기 */
   var res=await fetch(getGasUrl()+'?action=getTransactions');
   var data=await res.json();
 
-  /* ★ 수정 1: 디버그 로그 + 건수 검증 */
-  console.log('getTransactions raw response:', data);
-
-  var transactions = data.transactions || data.data || data.rows || [];
-
-  console.log('transactions count:', transactions.length);
+  var transactions = data.transactions || data.data || data.rows ||[];
 
   if(!Array.isArray(transactions)){
     throw new Error('이력 데이터 형식 오류');
@@ -2686,35 +2646,22 @@ async function syncTxSilent(){
     throw new Error('GAS 응답은 성공했지만 이력 데이터가 0건입니다. 구글시트를 확인해주세요.');
   }
 
-  /* ── 수정 1: normalized 생성 직후 첫/마지막 행 로그 ── */
   var normalized = transactions.map(normalizeTxRow);
-  console.log('[sync] normalized count:', normalized.length);
-  console.log('[sync] normalized first (oldest raw):', normalized[0]);
-  console.log('[sync] normalized last  (newest raw):', normalized[normalized.length - 1]);
 
-  /* 최신순 정렬 — NaN 날짜 행은 맨 뒤, 누락 없음 */
   normalized.sort(function(a, b){
     var ta = _parseDate(a.date), tb = _parseDate(b.date);
     if(ta === 0 && tb === 0) return 0;
-    if(ta === 0) return 1;   /* 파싱 실패 → 맨 뒤 */
+    if(ta === 0) return 1;
     if(tb === 0) return -1;
-    return tb - ta;          /* 최신순(내림차순) */
+    return tb - ta;
   });
-  console.log('[sync] after sort — first (newest):', normalized[0]);
-  console.log('[sync] after sort — last  (oldest):', normalized[normalized.length - 1]);
 
-  /* ── 수정 2: setTx 직후 getTx() 첫/마지막 행 로그 ── */
   setTx(normalized);
-  var saved = getTx();
-  console.log('[sync] saved count:', saved.length);
-  console.log('[sync] saved first:', saved[0]);
-  console.log('[sync] saved last :', saved[saved.length - 1]);
 
   lsSet(KEYS.SYNC,new Date().toISOString());
 }
 
 async function syncMasterNow(){
-  /* ★ getGasUrl() 사용 — URL 확인 */
   if(!getGasUrl()){ toast('⚠️ GAS URL을 먼저 저장해주세요'); return; }
   try{
     showLoad(true);
@@ -2723,7 +2670,6 @@ async function syncMasterNow(){
     renderStock();
     renderShort();
     updateSyncChip();
-    /* ★ 수정 4: 실제 품목 건수 표시 */
     var cnt = getMaster().length;
     if(cnt === 0){
       showAlert('⚠️ 품목 동기화 경고', '동기화는 완료됐지만 저장된 품목이 0건입니다.<br>구글시트 품목 데이터를 확인해주세요.');
@@ -2738,19 +2684,16 @@ async function syncMasterNow(){
 }
 
 async function syncTxNow(){
-  /* ★ getGasUrl() 사용 — URL 확인 */
   if(!getGasUrl()){ toast('⚠️ GAS URL을 먼저 저장해주세요'); return; }
   try{
     showLoad(true);
     await syncTxSilent();
-    /* ★ 수정 5: 이력 화면은 전체 조건으로 초기화 후 렌더 */
     resetHistFilters();
     renderDash();
     renderHist();
     renderStock();
     renderShort();
     updateSyncChip();
-    /* ★ 수정 3: 실제 저장 건수 표시 / 0건이면 오류 */
     var cnt = getTx().length;
     if(cnt === 0){
       showAlert('⚠️ 이력 동기화 경고', '동기화는 완료됐지만 저장된 이력이 0건입니다.<br>구글시트 이력 데이터를 확인해주세요.');
@@ -2775,7 +2718,6 @@ async function doRefreshAll(){
     toast('로컬 데이터 새로고침 완료');
     return;
   }
-  /* ★ getGasUrl() 확인 */
   if(!getGasUrl()){
     toast('⚠️ GAS URL을 먼저 저장해주세요');
     return;
