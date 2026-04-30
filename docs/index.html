@@ -2512,15 +2512,35 @@ function renderShort(){
 async function saveMaster(){
   var row={code:document.getElementById('mCode').value.trim(),name:document.getElementById('mName').value.trim(),spec:document.getElementById('mSpec').value.trim(),unit:document.getElementById('mUnit').value.trim()||'EA',safety:Number(document.getElementById('mSafety').value||0)};
   if(!row.code||!row.name){toast('품목코드와 품목명을 입력하세요');return;}
-  var idx=document.getElementById('mIdx').value,s=getSettings();
+  var s=getSettings();
   if(s.useGas==='Y'){try{showLoad(true);await gasGet(CONFIG.ACTION.SAVE_MASTER,row);await syncMasterSilent();}catch(e){showAlert('❌ 품목 저장 실패','<code>'+e.message+'</code>');showLoad(false);return;}finally{showLoad(false);}}
-  else{var arr=getMaster();if(idx==='')arr.push(row);else arr[Number(idx)]=row;setMaster(arr);}
+  else{
+    /* ★ 버그수정: 인덱스 대신 품목코드(고유값)로 기존 항목 찾아 교체 */
+    var arr=getMaster();
+    var existIdx=arr.findIndex(function(r){return r.code===row.code;});
+    if(existIdx>=0)arr[existIdx]=row;else arr.push(row);
+    setMaster(arr);
+  }
   resetMasterForm();renderMaster();renderStock();renderShort();
   toast(s.useGas==='Y'?'✅ 품목 저장 완료 (시트 반영)':'✅ 품목 저장 완료 (로컬)');
 }
-function editMaster(i){var r=getMaster()[i];document.getElementById('mIdx').value=i;document.getElementById('mCode').value=r.code;document.getElementById('mName').value=r.name;document.getElementById('mSpec').value=r.spec||'';document.getElementById('mUnit').value=r.unit||'EA';document.getElementById('mSafety').value=r.safety||0;}
-async function delMaster(i){
-  var arr=getMaster(),item=arr[i];if(!item)return;
+function editMaster(code){
+  /* ★ 버그수정: 인덱스 대신 품목코드(고유값)로 항목을 찾아 폼에 채움 */
+  var arr=getMaster(),idx=arr.findIndex(function(r){return r.code===code;});
+  if(idx<0){toast('⚠️ 해당 품목을 찾을 수 없습니다: '+code);return;}
+  var r=arr[idx];
+  document.getElementById('mIdx').value=idx;
+  document.getElementById('mCode').value=r.code;
+  document.getElementById('mName').value=r.name;
+  document.getElementById('mSpec').value=r.spec||'';
+  document.getElementById('mUnit').value=r.unit||'EA';
+  document.getElementById('mSafety').value=r.safety||0;
+}
+async function delMaster(code){
+  /* ★ 버그수정: 인덱스 대신 품목코드(고유값)로 항목을 찾아 삭제 */
+  var arr=getMaster(),i=arr.findIndex(function(r){return r.code===code;});
+  if(i<0){toast('⚠️ 해당 품목을 찾을 수 없습니다: '+code);return;}
+  var item=arr[i];
   var s=getSettings(),msg=s.useGas==='Y'?'['+item.code+'] '+item.name+'\n\n※ Google Sheets에서도 즉시 삭제됩니다.':'['+item.code+'] '+item.name+'\n\n로컬에서 삭제합니다.';
   if(!confirm(msg))return;
   if(s.useGas==='Y'){try{showLoad(true);await gasGet(CONFIG.ACTION.DEL_MASTER,{code:item.code,name:item.name});arr.splice(i,1);setMaster(arr);await syncMasterSilent();}catch(e){showAlert('❌ 시트 삭제 실패','<code>'+e.message+'</code>');showLoad(false);return;}finally{showLoad(false);}}
@@ -2532,7 +2552,8 @@ function renderMaster(){
   var rows=getMaster();
   document.getElementById('masterCnt').textContent=rows.length+'품목';
   document.getElementById('masterTbody').innerHTML=rows.length
-    ?rows.map(function(r,i){return '<tr><td>'+r.code+'</td><td>'+r.name+'</td><td>'+(r.spec||'')+'</td><td>'+(r.unit||'')+'</td><td class="r">'+fmt(r.safety)+'</td><td><div style="display:flex;gap:6px"><button class="btn sec" style="font-size:12px;padding:5px 10px" onclick="editMaster('+i+')">수정</button><button class="btn dan" style="font-size:12px;padding:5px 10px" onclick="delMaster('+i+')">삭제</button></div></td></tr>';}).join('')
+    /* ★ 버그수정: onclick에 인덱스 대신 품목코드(고유값) 전달 */
+    ?rows.map(function(r){var esc=r.code.replace(/\\/g,'\\\\').replace(/'/g,"\\'");return '<tr><td>'+r.code+'</td><td>'+r.name+'</td><td>'+(r.spec||'')+'</td><td>'+(r.unit||'')+'</td><td class="r">'+fmt(r.safety)+'</td><td><div style="display:flex;gap:6px"><button class="btn sec" style="font-size:12px;padding:5px 10px" onclick="editMaster(\''+esc+'\')">수정</button><button class="btn dan" style="font-size:12px;padding:5px 10px" onclick="delMaster(\''+esc+'\')">삭제</button></div></td></tr>';}).join('')
     :'<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px">품목이 없습니다</td></tr>';
 }
 
