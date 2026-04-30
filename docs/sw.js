@@ -1,5 +1,5 @@
 /* KY 재고관리 안정형 PWA Service Worker */
-const CACHE_NAME = 'ky-inventory-pwa-v20260428-stable-1';
+const CACHE_NAME = 'ky-inventory-pwa-v20260430-1';
 const APP_SHELL = [
   './',
   './index.html',
