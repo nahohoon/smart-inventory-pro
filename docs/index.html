@@ -2514,22 +2514,14 @@ async function saveMaster(){
   if(!row.code||!row.name){toast('품목코드와 품목명을 입력하세요');return;}
   var s=getSettings();
   if(s.useGas==='Y'){try{showLoad(true);await gasGet(CONFIG.ACTION.SAVE_MASTER,row);await syncMasterSilent();}catch(e){showAlert('❌ 품목 저장 실패','<code>'+e.message+'</code>');showLoad(false);return;}finally{showLoad(false);}}
-  else{
-    /* ★ 버그수정: 인덱스 대신 품목코드(고유값)로 기존 항목 찾아 교체 */
-    var arr=getMaster();
-    var existIdx=arr.findIndex(function(r){return r.code===row.code;});
-    if(existIdx>=0)arr[existIdx]=row;else arr.push(row);
-    setMaster(arr);
-  }
+  else{var arr=getMaster();var ei=arr.findIndex(function(r){return r.code===row.code;});if(ei>=0)arr[ei]=row;else arr.push(row);setMaster(arr);}
   resetMasterForm();renderMaster();renderStock();renderShort();
   toast(s.useGas==='Y'?'✅ 품목 저장 완료 (시트 반영)':'✅ 품목 저장 완료 (로컬)');
 }
 function editMaster(code){
-  /* ★ 버그수정: 인덱스 대신 품목코드(고유값)로 항목을 찾아 폼에 채움 */
-  var arr=getMaster(),idx=arr.findIndex(function(r){return r.code===code;});
-  if(idx<0){toast('⚠️ 해당 품목을 찾을 수 없습니다: '+code);return;}
-  var r=arr[idx];
-  document.getElementById('mIdx').value=idx;
+  var arr=getMaster();
+  var r=arr.filter(function(x){return x.code===code;})[0];
+  if(!r){toast('품목을 찾을 수 없습니다: '+code);return;}
   document.getElementById('mCode').value=r.code;
   document.getElementById('mName').value=r.name;
   document.getElementById('mSpec').value=r.spec||'';
@@ -2537,9 +2529,9 @@ function editMaster(code){
   document.getElementById('mSafety').value=r.safety||0;
 }
 async function delMaster(code){
-  /* ★ 버그수정: 인덱스 대신 품목코드(고유값)로 항목을 찾아 삭제 */
-  var arr=getMaster(),i=arr.findIndex(function(r){return r.code===code;});
-  if(i<0){toast('⚠️ 해당 품목을 찾을 수 없습니다: '+code);return;}
+  var arr=getMaster();
+  var i=arr.findIndex(function(r){return r.code===code;});
+  if(i<0){toast('품목을 찾을 수 없습니다: '+code);return;}
   var item=arr[i];
   var s=getSettings(),msg=s.useGas==='Y'?'['+item.code+'] '+item.name+'\n\n※ Google Sheets에서도 즉시 삭제됩니다.':'['+item.code+'] '+item.name+'\n\n로컬에서 삭제합니다.';
   if(!confirm(msg))return;
@@ -2551,27 +2543,34 @@ function resetMasterForm(){document.getElementById('mIdx').value='';document.get
 function renderMaster(){
   var rows=getMaster();
   document.getElementById('masterCnt').textContent=rows.length+'품목';
-  document.getElementById('masterTbody').innerHTML=rows.length
-    ?rows.map(function(r){
-      return '<tr data-code="'+r.code.replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'">'
-        +'<td>'+r.code+'</td><td>'+r.name+'</td><td>'+(r.spec||'')+'</td><td>'+(r.unit||'')+'</td>'
-        +'<td class="r">'+fmt(r.safety)+'</td>'
-        +'<td><div style="display:flex;gap:6px">'
-        +'<button class="btn sec mst-edit" style="font-size:12px;padding:5px 10px">수정</button>'
-        +'<button class="btn dan mst-del" style="font-size:12px;padding:5px 10px">삭제</button>'
-        +'</div></td></tr>';
-    }).join('')
-    :'<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px">품목이 없습니다</td></tr>';
-  /* ★ 이벤트 위임: tbody 단일 리스너로 수정/삭제 처리 — 이스케이프 문제 완전 제거 */
   var tbody=document.getElementById('masterTbody');
-  tbody.onclick=function(e){
-    var btn=e.target.closest('button');
+  if(!rows.length){
+    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:20px">품목이 없습니다</td></tr>';
+    return;
+  }
+  tbody.innerHTML=rows.map(function(r){
+    var code=r.code||'';
+    var safeCode=code.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+    return '<tr data-mcode="'+safeCode+'">'
+      +'<td>'+code+'</td>'
+      +'<td>'+(r.name||'')+'</td>'
+      +'<td>'+(r.spec||'')+'</td>'
+      +'<td>'+(r.unit||'')+'</td>'
+      +'<td class="r">'+fmt(r.safety)+'</td>'
+      +'<td><div style="display:flex;gap:6px">'
+      +'<button class="btn sec mst-edit-btn" style="font-size:12px;padding:5px 10px">수정</button>'
+      +'<button class="btn dan mst-del-btn" style="font-size:12px;padding:5px 10px">삭제</button>'
+      +'</div></td></tr>';
+  }).join('');
+  /* 이벤트 위임 — onclick 인라인 속성 완전 제거로 이스케이프 문제 원천 차단 */
+  tbody.onclick=function(ev){
+    var btn=ev.target.closest('button');
     if(!btn)return;
-    var tr=btn.closest('tr');
+    var tr=btn.closest('tr[data-mcode]');
     if(!tr)return;
-    var code=tr.getAttribute('data-code');
-    if(btn.classList.contains('mst-edit'))editMaster(code);
-    else if(btn.classList.contains('mst-del'))delMaster(code);
+    var code=tr.getAttribute('data-mcode');
+    if(btn.classList.contains('mst-edit-btn'))editMaster(code);
+    else if(btn.classList.contains('mst-del-btn'))delMaster(code);
   };
 }
 
