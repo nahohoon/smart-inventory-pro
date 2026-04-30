@@ -1959,7 +1959,7 @@ function drawSimpleBar(canvasId,labels,data,color){
   var ctx=cv.getContext('2d'),W=cv.offsetWidth||400,H=cv.height||180;
   cv.width=W;ctx.clearRect(0,0,W,H);if(!data.length)return;
   var maxV=Math.max.apply(null,data.concat([1])),pad={l:10,r:10,t:10,b:30},bW=(W-pad.l-pad.r)/data.length;
-  data.forEach(function(v,i){var x=pad.l+i*bW+bW*.1,bw=bW*.8,h=(v/maxV)*(H-pad.t-pad.b);ctx.fillStyle=color||'#2563eb';ctx.fillRect(x,H-pad.b-h,bw,h);ctx.fillStyle='#94a3b8';ctx.font='9px sans-serif';ctx.textAlign='center';var lbl=labels[i]||'';ctx.fillText(lbl.length>6?lbl.slice(0,6)+'…',x+bw/2,H-4);});
+  data.forEach(function(v,i){var x=pad.l+i*bW+bW*.1,bw=bW*.8,h=(v/maxV)*(H-pad.t-pad.b);ctx.fillStyle=color||'#2563eb';ctx.fillRect(x,H-pad.b-h,bw,h);ctx.fillStyle='#94a3b8';ctx.font='9px sans-serif';ctx.textAlign='center';var lbl=labels[i]||'';ctx.fillText(lbl.length>6?lbl.slice(0,6)+'…':lbl,x+bw/2,H-4);});
 }
 function drawDonut(canvasId,labels,data,colors){
   var cv=document.getElementById(canvasId);if(!cv)return;
