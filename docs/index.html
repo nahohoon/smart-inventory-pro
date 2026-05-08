@@ -1442,6 +1442,35 @@ var CONFIG = {
   }
 };
 
+(function syncDisplayDefaultsFromConfig(){
+  if(!window.CONFIG) return;
+  var co=CONFIG.COMPANY;
+  var lg=CONFIG.LOGO_TEXT;
+  var sub=CONFIG.SUBTITLE;
+  var foot=CONFIG.FOOTER;
+  var th=CONFIG.THEME || {};
+  document.title=co+' — 재고·물류관리';
+  var m1=document.querySelector('meta[name="application-name"]');
+  if(m1) m1.setAttribute('content',co);
+  var m2=document.querySelector('meta[name="apple-mobile-web-app-title"]');
+  if(m2) m2.setAttribute('content',co);
+  var mt=document.querySelector('meta[name="theme-color"]');
+  if(mt && th.primary) mt.setAttribute('content',th.primary);
+  if(th.primary) document.documentElement.style.setProperty('--cp',th.primary);
+  function T(id,v){
+    var e=document.getElementById(id);
+    if(e && v) e.textContent=v;
+  }
+  T('loginLogo',lg);
+  T('loginTitle',co);
+  T('loginSub',sub);
+  T('loginFooter',foot);
+  T('sLogo',lg);
+  T('sName',co);
+  T('sBrandSub',sub);
+  T('compChip',co);
+})();
+
 /* ─── localStorage ─── */
 var P = 'inv_' + CONFIG.CLIENT_ID + '_';
 var KEYS = { S: P+'settings', M: P+'master', T: P+'tx', SYNC: P+'syncTime', LOGO: P+'logoImg' };
