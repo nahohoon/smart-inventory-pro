@@ -1444,11 +1444,16 @@ var CONFIG = {
 /* ─── localStorage ─── */
 var P = 'inv_' + CONFIG.CLIENT_ID + '_';
 var KEYS = { S: P+'settings', M: P+'master', T: P+'tx', SYNC: P+'syncTime', LOGO: P+'logoImg' };
+var SIP_GAS_URL_KEY = 'sip_gas_url_' + CONFIG.CLIENT_ID;
+var LEGACY_SIP_GAS_URL = 'sip_gas_url';
+var KY_SESSION_KEY = 'ky_inv_session_v4_' + CONFIG.CLIENT_ID;
+var KY_SESSION_TTL = 8 * 3600 * 1000; /* 8시간 */
+var KY_USERS_KEY = 'ky_inv_users_v4_' + CONFIG.CLIENT_ID;
 function lsGet(k,def){try{var v=localStorage.getItem(k);return v!==null?JSON.parse(v):def;}catch(e){return def;}}
 function lsSet(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}
-/* ─── GAS URL 우선순위: sip_gas_url(localStorage) > 설정저장값 > CONFIG.GAS_URL ─── */
+/* ─── GAS URL: sip_gas_url_${CLIENT_ID} > LEGACY sip_gas_url > CONFIG.GAS_URL ─── */
 function getGasUrl(){
-  return localStorage.getItem('sip_gas_url') || CONFIG.GAS_URL;
+  return localStorage.getItem(SIP_GAS_URL_KEY) || localStorage.getItem(LEGACY_SIP_GAS_URL) || CONFIG.GAS_URL;
 }
 function getSettings(){
   var def = {
@@ -1537,9 +1542,6 @@ function applyCssVars(th){
 /* ════════════════════════════════════════
    KY 세션 관리 + 사용자 관리 (v4 추가)
    ════════════════════════════════════════ */
-var KY_SESSION_KEY = 'ky_inv_session_v4';
-var KY_SESSION_TTL = 8 * 3600 * 1000; /* 8시간 */
-var KY_USERS_KEY   = 'ky_inv_users_v4';
 var G_USER = null;
 
 function kyGetUsers() {
@@ -1753,8 +1755,7 @@ function saveGasUrl(){
     toast('⚠️ URL을 입력해주세요');
     return;
   }
-  /* sip_gas_url 키로 localStorage 저장 */
-  localStorage.setItem('sip_gas_url', url);
+  localStorage.setItem(SIP_GAS_URL_KEY, url);
   /* 설정 저장값도 함께 업데이트 */
   var s = getSettings();
   s.gasUrl = url;
@@ -1780,8 +1781,10 @@ function saveSettings(){
     sideBtm:gv('setClrSideBtm','#1a3a6b'),
     loginTop:gv('setClrLoginTop','#0a1628')
   };
-  /* gasUrl은 sip_gas_url 우선, 없으면 입력값 사용 */
-  var savedUrl = localStorage.getItem('sip_gas_url') || gv('setGasUrl',CONFIG.GAS_URL);
+  var savedUrl = localStorage.getItem(SIP_GAS_URL_KEY) || localStorage.getItem(LEGACY_SIP_GAS_URL) || gv('setGasUrl',CONFIG.GAS_URL);
+  if (savedUrl) {
+    try { localStorage.setItem(SIP_GAS_URL_KEY, savedUrl); } catch(e) {}
+  }
   lsSet(KEYS.S,{
     company:gv('setCo',CONFIG.COMPANY),
     logo:gv('setLogo',CONFIG.LOGO_TEXT),
