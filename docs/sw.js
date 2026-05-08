@@ -1,5 +1,6 @@
 /* KY 재고관리 안정형 PWA Service Worker */
-const CACHE_NAME = 'ky-inventory-pwa-v20260430-ai-3';
+const CACHE_NAME = 'ky-inventory-cache-v1';
+const CACHE_PREFIX = 'ky-inventory-cache-';
 
 const APP_SHELL = [
   './',
@@ -21,7 +22,7 @@ self.addEventListener('activate', event => {
     caches.keys().then(keys =>
       Promise.all(
         keys
-          .filter(key => key !== CACHE_NAME)
+          .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
           .map(key => caches.delete(key))
       )
     ).then(() => self.clients.claim())
