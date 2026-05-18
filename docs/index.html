@@ -791,6 +791,65 @@ tr:hover td{background:#fafbfc}
     min-width:0!important;
   }
 }
+
+/* ── QR 라벨 출력 (통합) ── */
+#tab-label .lbl-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+#tab-label .lbl-toolbar h3{font-size:15px;font-weight:800;color:#0f172a}
+#tab-label #lbl-slot-badge{background:#0F2448;color:#c9a84c;font-weight:800;font-size:13px;border-radius:12px;padding:3px 14px}
+#tab-label #lbl-ctrl{background:#fff;padding:13px 16px;border:1px solid #e2e8f0;border-radius:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:12px}
+#tab-label .lbl-cf label{display:block;font-size:11px;color:#555;margin-bottom:3px}
+#tab-label #lbl-sw{position:relative;flex:1 1 240px;min-width:180px}
+#tab-label #lbl-q{border:1.5px solid #b0c0d8;border-radius:6px;padding:8px 11px;font-size:14px;width:100%;font-family:inherit}
+#tab-label #lbl-q:focus{outline:none;border-color:#0F2448}
+#tab-label #lbl-sugg{position:absolute;z-index:999;background:#fff;border:1.5px solid #0F2448;border-radius:6px;top:100%;left:0;right:0;max-height:260px;overflow-y:auto;box-shadow:0 4px 16px rgba(0,0,0,.15);display:none}
+#tab-label .lbl-si{padding:8px 13px;cursor:pointer;border-bottom:1px solid #f0f0f0;display:flex;gap:8px;align-items:center;font-size:13px}
+#tab-label .lbl-si:hover{background:#f0f4ff}
+#tab-label .lbl-sb{background:#0F2448;color:#c9a84c;font-size:10px;font-weight:700;padding:2px 5px;border-radius:3px;flex-shrink:0}
+#tab-label .lbl-sm{font-family:monospace;font-size:11.5px;font-weight:700;color:#333;flex-shrink:0}
+#tab-label .lbl-csel{border:1.5px solid #b0c0d8;border-radius:6px;padding:8px 9px;font-size:14px;font-family:inherit}
+#tab-label .lbl-bpr{background:#0F2448;color:#c9a84c;border:none;border-radius:6px;padding:9px 20px;font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
+#tab-label .lbl-bcl{background:#dc2626;color:#fff;border:none;border-radius:6px;padding:9px 14px;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit}
+#tab-label #lbl-msg{background:#0F2448;color:#c9a84c;padding:9px 16px;font-weight:700;font-size:13px;display:none;border-radius:8px;margin-bottom:12px}
+#tab-label #lbl-preview{padding:4px 0 8px}
+#tab-label #lbl-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 12px;max-width:920px;margin:0 auto}
+#tab-label .lc{display:flex;flex-direction:row;align-items:center;gap:18px;border:1px solid #b0b8cc;border-radius:6px;padding:10px 16px 10px 30px;min-height:96px;background:#fff;position:relative}
+#tab-label .lc.empty{border:2px dashed #c8d0e0;background:#fafbff}
+#tab-label .sno{position:absolute;top:5px;left:7px;background:#0F2448;color:#c9a84c;font-size:10px;font-weight:800;padding:1px 5px;border-radius:3px}
+#tab-label .brm{position:absolute;top:5px;right:7px;background:none;border:none;cursor:pointer;font-size:13px;color:#bbb;padding:0}
+#tab-label .brm:hover{color:#dc2626}
+#tab-label .qb{flex-shrink:0;width:84px;height:84px;overflow:hidden}
+#tab-label .qb img,#tab-label .qb canvas,#tab-label .qb svg,#tab-label .qb table{display:block;width:84px!important;height:84px!important}
+#tab-label .li{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+#tab-label .lbr{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+#tab-label .lcat{background:#0F2448;color:#c9a84c;font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:2px}
+#tab-label .lu{font-size:10.5px;color:#777;font-weight:600}
+#tab-label .ln{font-size:17px;font-weight:800;line-height:1.3;word-break:keep-all}
+#tab-label .ls{font-size:12px;color:#555}
+#tab-label .lb{font-family:monospace;font-size:14px;font-weight:700;letter-spacing:.7px;color:#222}
+#tab-label .et{flex:1;text-align:center;color:#b0b8cc;font-size:13px;padding:20px 0}
+@media print{
+  #loginScreen,#mobileTabBar,#toast,#loadingOverlay,.modal-bg{display:none!important}
+  #appWrap .side,#appWrap .topbar,#lbl-ctrl,#lbl-msg,#lbl-toolbar,.card-hd{display:none!important}
+  #appWrap,#appWrap .layout,#appWrap .main,#appWrap .content{display:block!important;width:100%!important;height:auto!important;overflow:visible!important}
+  #tab-label,.tab{display:block!important}
+  .tab:not(#tab-label){display:none!important}
+  body{background:#fff!important;margin:0!important;padding:0!important}
+  #lbl-preview{padding:0!important;margin:0!important}
+  #lbl-grid{display:grid!important;grid-template-columns:repeat(2,1fr)!important;grid-template-rows:repeat(6,1fr)!important;gap:1.5mm 2mm!important;width:100%!important;height:100vh!important;max-width:none!important;margin:0!important;padding:0!important}
+  #tab-label .lc{display:flex!important;flex-direction:row!important;align-items:center!important;gap:18pt!important;border:0.5pt solid #999!important;border-radius:0!important;padding:5pt 10pt 5pt 22pt!important;background:#fff!important;overflow:hidden!important;min-height:0!important;height:100%!important;box-sizing:border-box!important;position:relative!important}
+  #tab-label .lc.empty{border:0.5pt dashed #ccc!important;visibility:hidden!important}
+  #tab-label .qb{flex-shrink:0!important;flex-grow:0!important;width:60pt!important;min-width:60pt!important;max-width:60pt!important;height:60pt!important;min-height:60pt!important;max-height:60pt!important;overflow:hidden!important}
+  #tab-label .qb img{display:block!important;width:60pt!important;height:60pt!important;max-width:60pt!important;max-height:60pt!important;min-width:0!important;min-height:0!important;object-fit:contain!important}
+  #tab-label .qb canvas{display:block!important;width:60pt!important;height:60pt!important;max-width:60pt!important;max-height:60pt!important}
+  #tab-label .qb svg,#tab-label .qb table{display:block!important;width:56pt!important;height:56pt!important;max-width:56pt!important;max-height:56pt!important}
+  #tab-label .li{flex:1!important;min-width:0!important;overflow:hidden!important}
+  #tab-label .ln{font-size:12pt!important;font-weight:800!important;line-height:1.2!important}
+  #tab-label .lb{font-size:10pt!important;font-weight:700!important;letter-spacing:.4px!important}
+  #tab-label .lcat,#tab-label .lu,#tab-label .ls{font-size:8.5pt!important}
+  #tab-label .sno{font-size:7pt!important;top:2pt!important;left:3pt!important}
+  #tab-label .brm{display:none!important}
+  @page{size:A4 portrait;margin:8mm 7mm}
+}
 </style>
 
   <!-- v8: Skywork 배지 완전 제거 -->
@@ -872,6 +931,7 @@ tr:hover td{background:#fafbfc}
       <button class="nav-btn" data-tab="stock"><span class="ico">📦</span>재고 조회</button>
       <button class="nav-btn" data-tab="short"><span class="ico">⚠️</span>부족 재고 <span class="badge" id="shortBadge">0</span></button>
       <button class="nav-btn" data-tab="master"><span class="ico">🗂️</span>품목 마스터</button>
+      <button class="nav-btn" data-tab="label"><span class="ico">🏷️</span>QR 라벨</button>
       <div class="nav-sec">분석</div>
       <button class="nav-btn" data-tab="stats"><span class="ico">📊</span>통계 / 리포트</button>
       <div class="nav-sec">설정</div>
@@ -1220,6 +1280,40 @@ tr:hover td{background:#fafbfc}
           </div>
         </div>
 
+        <!-- ━━ QR 라벨 출력 ━━ -->
+        <div class="tab" id="tab-label">
+          <div class="card">
+            <div class="card-bd" style="padding:16px 18px">
+              <div class="lbl-toolbar">
+                <h3>QR 바코드 라벨 출력</h3>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <span id="lbl-slot-badge">0/12 슬롯</span>
+                  <span class="chip gray" id="lbl-hd-cnt">0품목</span>
+                </div>
+              </div>
+              <div id="lbl-ctrl">
+                <div class="lbl-cf" id="lbl-sw">
+                  <label>품목 검색 (바코드번호 · 품목명 · 규격)</label>
+                  <input id="lbl-q" placeholder="바코드번호 또는 품목명 입력..." autocomplete="off">
+                  <div id="lbl-sugg" style="display:none"></div>
+                </div>
+                <div class="lbl-cf"><label>수량</label>
+                  <select id="lbl-qty" class="lbl-csel"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
+                </div>
+                <div class="lbl-cf"><label>시작 슬롯</label>
+                  <select id="lbl-ss" class="lbl-csel"><option value="0" selected>자동</option><option value="1">#1</option><option value="2">#2</option><option value="3">#3</option><option value="4">#4</option><option value="5">#5</option><option value="6">#6</option><option value="7">#7</option><option value="8">#8</option><option value="9">#9</option><option value="10">#10</option><option value="11">#11</option><option value="12">#12</option></select>
+                </div>
+                <div class="lbl-cf"><label>&nbsp;</label><button type="button" class="lbl-bpr" onclick="doPrint()">🖶 인쇄</button></div>
+                <div class="lbl-cf"><label>&nbsp;</label><button type="button" class="lbl-bcl" onclick="clearAll()">🗑 초기화</button></div>
+              </div>
+              <div id="lbl-msg" style="display:none"></div>
+              <div id="lbl-preview">
+                <div id="lbl-grid"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- ━━ 통계 ━━ -->
         <div class="tab" id="tab-stats">
           <div class="grid2">
@@ -1393,6 +1487,7 @@ tr:hover td{background:#fafbfc}
 <!-- 토스트 -->
 <div id="toast"></div>
 
+<script src="label-qrcode.min.js"></script>
 <script>
 'use strict';
 /* ══════════════════════════════════════════════════════════════
@@ -1688,6 +1783,7 @@ var PAGE_META={
   stock:['재고 조회','현재고 및 창고별 수량'],
   short:['부족 재고','안전재고 이하 품목 관리'],
   master:['품목 마스터','품목 기본정보 관리'],
+  label:['QR 라벨','바코드·QR 라벨 12칸 출력'],
   stats:['통계 / 리포트','창고·출고 분석'],
   settings:['시스템 설정','GAS URL / 저장방식 설정']
 };
@@ -1702,6 +1798,7 @@ function goTab(name){
   try{if(name==='stock')renderStock();}catch(e){}
   try{if(name==='short')renderShort();}catch(e){}
   try{if(name==='master')renderMaster();}catch(e){}
+  try{if(name==='label'){rebuildLabelItems();initLabelTab();}}catch(e){}
   try{if(name==='stats')renderStats();}catch(e){}
   try{if(name==='settings'){applyBrand();updateSyncChip();}}catch(e){}
   try{ autoSyncAllSilent(); }catch(e){}
@@ -2545,6 +2642,7 @@ async function saveMaster(){
   if(s.useGas==='Y'){try{showLoad(true);await gasGet(CONFIG.ACTION.SAVE_MASTER,row);await syncMasterSilent();}catch(e){showAlert('❌ 품목 저장 실패','<code>'+e.message+'</code>');showLoad(false);return;}finally{showLoad(false);}}
   else{var arr=getMaster();var ei=arr.findIndex(function(r){return r.code===row.code;});if(ei>=0)arr[ei]=row;else arr.push(row);setMaster(arr);}
   resetMasterForm();renderMaster();renderStock();renderShort();
+  try{rebuildLabelItems();}catch(e){}
   toast(s.useGas==='Y'?'✅ 품목 저장 완료 (시트 반영)':'✅ 품목 저장 완료 (로컬)');
 }
 function editMaster(code){
@@ -2566,7 +2664,9 @@ async function delMaster(code){
   if(!confirm(msg))return;
   if(s.useGas==='Y'){try{showLoad(true);await gasGet(CONFIG.ACTION.DEL_MASTER,{code:item.code,name:item.name});arr.splice(i,1);setMaster(arr);await syncMasterSilent();}catch(e){showAlert('❌ 시트 삭제 실패','<code>'+e.message+'</code>');showLoad(false);return;}finally{showLoad(false);}}
   else{arr.splice(i,1);setMaster(arr);}
-  renderMaster();renderStock();renderShort();toast('✅ 품목 삭제 완료');
+  renderMaster();renderStock();renderShort();
+  try{rebuildLabelItems();}catch(e){}
+  toast('✅ 품목 삭제 완료');
 }
 function resetMasterForm(){document.getElementById('mIdx').value='';document.getElementById('mCode').value='';document.getElementById('mName').value='';document.getElementById('mSpec').value='';document.getElementById('mUnit').value='EA';document.getElementById('mSafety').value=0;}
 function renderMaster(){
@@ -2732,6 +2832,7 @@ async function syncMasterSilent(){
 
   var normalized = items.map(normalizeMasterItem);
   setMaster(normalized);
+  try{rebuildLabelItems();}catch(e){}
 
   lsSet(KEYS.SYNC,new Date().toISOString());
 }
@@ -2909,6 +3010,227 @@ function stopAutoSync(){
     clearInterval(_autoSyncTimer);
     _autoSyncTimer = null;
   }
+}
+
+/* ─── QR 라벨 출력 (품목마스터 연동) ─── */
+var labelALL = [];
+var labelSLOTS = [null,null,null,null,null,null,null,null,null,null,null,null];
+var _labelTabInited = false;
+var _labelMsgTimer = null;
+
+function masterToLabelItem(r) {
+  var code = String(r.code || r.itemCode || r.barcode || r['품목코드'] || '').trim();
+  if (!code) return null;
+  return {
+    b: code,
+    n: String(r.name || r.itemName || r['품목명'] || '').trim(),
+    s: String(r.spec || r['규격'] || r.model || '').trim(),
+    c: String(r.category || r['분류'] || '').trim(),
+    u: String(r.unit || r['단위'] || 'EA').trim() || 'EA'
+  };
+}
+
+function rebuildLabelItems() {
+  labelALL = getMaster().map(masterToLabelItem).filter(Boolean);
+  labelALL.sort(function(a, b) {
+    return a.b < b.b ? -1 : a.b > b.b ? 1 : 0;
+  });
+  var hc = document.getElementById('lbl-hd-cnt');
+  if (hc) hc.textContent = labelALL.length + '품목';
+}
+
+function initLabelTab() {
+  if (_labelTabInited) return;
+  _labelTabInited = true;
+  rebuildLabelItems();
+  renderGrid();
+  var qEl = document.getElementById('lbl-q');
+  if (qEl) {
+    qEl.addEventListener('input', onQ);
+    qEl.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { var r = qRes(); if (r.length) pick(r[0]); }
+      if (e.key === 'Escape') hideSugg();
+    });
+  }
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#lbl-sw')) hideSugg();
+  });
+}
+
+function lblEsc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function lblShowMsg(txt, bg) {
+  var el = document.getElementById('lbl-msg');
+  if (!el) return;
+  el.textContent = txt;
+  el.style.background = bg || '#0F2448';
+  el.style.display = 'block';
+  clearTimeout(_labelMsgTimer);
+  _labelMsgTimer = setTimeout(function() { el.style.display = 'none'; }, 3500);
+}
+
+function updCnt() {
+  var filled = labelSLOTS.filter(function(s) { return !!s; }).length;
+  var badge = document.getElementById('lbl-slot-badge');
+  if (badge) badge.textContent = filled + '/12 슬롯';
+  var hc = document.getElementById('lbl-hd-cnt');
+  if (hc) hc.textContent = labelALL.length + '품목';
+}
+
+function makeQR(container, text) {
+  container.innerHTML = '';
+  var ok = tryQR(container, text, QRCode.CorrectLevel.L);
+  if (!ok) {
+    var fallback = text.split(' ')[0];
+    tryQR(container, fallback, QRCode.CorrectLevel.L);
+  }
+}
+
+function tryQR(container, text, level) {
+  container.innerHTML = '';
+  try {
+    new QRCode(container, {
+      text: text || ' ',
+      width: 84, height: 84,
+      colorDark: '#000000', colorLight: '#ffffff',
+      correctLevel: level
+    });
+    setTimeout(function() {
+      var img = container.querySelector('img');
+      if (img) img.style.cssText = 'display:block;width:84px;height:84px;max-width:84px;max-height:84px';
+      var cvs = container.querySelector('canvas');
+      if (cvs) cvs.style.cssText = 'display:block;width:84px;height:84px;max-width:84px;max-height:84px';
+    }, 80);
+    return true;
+  } catch (err) {
+    container.style.cssText = 'background:#eee;display:flex;align-items:center;justify-content:center;font-size:9px;color:#666';
+    container.textContent = 'QR오류';
+    return false;
+  }
+}
+
+function renderGrid() {
+  var grid = document.getElementById('lbl-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  labelSLOTS.forEach(function(slot, i) {
+    var card = document.createElement('div');
+    card.className = 'lc' + (slot ? '' : ' empty');
+    var sno = document.createElement('div');
+    sno.className = 'sno';
+    sno.textContent = '#' + (i + 1);
+    card.appendChild(sno);
+    if (slot) {
+      var rm = document.createElement('button');
+      rm.className = 'brm';
+      rm.innerHTML = '&#10005;';
+      (function(idx) { rm.onclick = function() { labelSLOTS[idx] = null; renderGrid(); updCnt(); }; })(i);
+      card.appendChild(rm);
+      var qb = document.createElement('div');
+      qb.className = 'qb';
+      card.appendChild(qb);
+      var li = document.createElement('div');
+      li.className = 'li';
+      li.innerHTML =
+        '<div class="lbr">' +
+          (slot.c ? '<span class="lcat">' + lblEsc(slot.c) + '</span>' : '') +
+          (slot.u ? '<span class="lu">' + lblEsc(slot.u) + '</span>' : '') +
+        '</div>' +
+        '<div class="ln">' + lblEsc(slot.n) + '</div>' +
+        (slot.s ? '<div class="ls">' + lblEsc(slot.s) + '</div>' : '') +
+        '<div class="lb">' + lblEsc(slot.b) + '</div>';
+      card.appendChild(li);
+      (function(el, text, delay) {
+        setTimeout(function() { makeQR(el, text); }, delay);
+      })(qb, slot.b + ' ' + slot.n, i * 60);
+    } else {
+      var et = document.createElement('div');
+      et.className = 'et';
+      et.textContent = '빈 슬롯';
+      card.appendChild(et);
+    }
+    grid.appendChild(card);
+  });
+  updCnt();
+}
+
+function pick(item) {
+  var qty = parseInt(document.getElementById('lbl-qty').value, 10) || 1;
+  var ssVal = parseInt(document.getElementById('lbl-ss').value, 10);
+  var start;
+  if (!ssVal) {
+    var lastFilled = -1;
+    for (var i = 0; i < 12; i++) { if (labelSLOTS[i]) lastFilled = i; }
+    start = lastFilled + 2;
+    if (start > 12) start = 1;
+  } else {
+    start = ssVal;
+  }
+  var added = 0, idx = start - 1;
+  while (added < qty && idx < 12) { labelSLOTS[idx] = item; added++; idx++; }
+  renderGrid();
+  lblShowMsg(added + '장 추가: ' + item.n);
+  document.getElementById('lbl-q').value = '';
+  hideSugg();
+}
+
+function clearAll() {
+  labelSLOTS = [null,null,null,null,null,null,null,null,null,null,null,null];
+  renderGrid();
+  lblShowMsg('전체 초기화');
+}
+
+function doPrint() {
+  if (labelSLOTS.every(function(s) { return !s; })) {
+    lblShowMsg('슬롯에 품목을 먼저 추가하세요');
+    return;
+  }
+  document.querySelectorAll('#lbl-grid .qb canvas').forEach(function(cvs) {
+    if (!cvs.parentNode.querySelector('img')) {
+      var img = document.createElement('img');
+      img.src = cvs.toDataURL('image/png');
+      img.style.cssText = 'display:block;width:84px;height:84px;max-width:84px;max-height:84px';
+      cvs.parentNode.appendChild(img);
+    }
+  });
+  setTimeout(function() { window.print(); }, 300);
+}
+
+function qRes() {
+  var v = document.getElementById('lbl-q').value.trim().toLowerCase();
+  if (!v) return [];
+  return labelALL.filter(function(it) {
+    return it.b.toLowerCase().indexOf(v) >= 0 ||
+      it.n.toLowerCase().indexOf(v) >= 0 ||
+      (it.s || '').toLowerCase().indexOf(v) >= 0;
+  }).slice(0, 25);
+}
+
+function onQ() {
+  var res = qRes();
+  var sugg = document.getElementById('lbl-sugg');
+  if (!res.length) { sugg.style.display = 'none'; return; }
+  sugg.innerHTML = '';
+  res.forEach(function(it) {
+    var row = document.createElement('div');
+    row.className = 'lbl-si';
+    row.innerHTML =
+      '<span class="lbl-sb">' + lblEsc(it.c || '-') + '</span>' +
+      '<span class="lbl-sm">' + lblEsc(it.b) + '</span>' +
+      '<span>' + lblEsc(it.n) + '</span>' +
+      (it.s ? '<span style="font-size:11px;color:#888">' + lblEsc(it.s) + '</span>' : '');
+    (function(item) { row.onclick = function() { pick(item); }; })(it);
+    sugg.appendChild(row);
+  });
+  sugg.style.display = 'block';
+}
+
+function hideSugg() {
+  var sugg = document.getElementById('lbl-sugg');
+  if (sugg) sugg.style.display = 'none';
 }
 
 /* ─── 초기 시드 데이터 ─── */
