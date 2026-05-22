@@ -832,34 +832,63 @@ tr:hover td{background:#fafbfc}
 
   *,*::before,*::after{box-sizing:border-box!important}
 
-  /* UI 요소 숨김 */
+  /* 전체 UI 숨김 */
   #loginScreen,#mobileTabBar,#toast,#loadingOverlay,.modal-bg{display:none!important}
-  #appWrap .side,#appWrap .topbar,#lbl-ctrl,#lbl-msg,#lbl-toolbar,.card-hd{display:none!important}
+  #appWrap .side,#appWrap .topbar{display:none!important}
+
+  /* 화면용 헤더/컨트롤 완전 숨김 (높이 0, 마진/패딩 0) */
+  .lbl-toolbar,
+  #lbl-slot-badge,
+  #lbl-hd-cnt,
+  #lbl-ctrl,
+  #lbl-msg,
+  .card-hd{
+    display:none!important;
+    visibility:hidden!important;
+    height:0!important;
+    margin:0!important;
+    padding:0!important;
+    overflow:hidden!important;
+  }
 
   /* 래퍼 초기화 */
   html,body{margin:0!important;padding:0!important;background:#fff!important;overflow:hidden!important}
-  #appWrap,#appWrap .layout,#appWrap .main,#appWrap .content{display:block!important;width:100%!important;height:auto!important;overflow:visible!important;margin:0!important;padding:0!important;border:none!important;box-shadow:none!important}
+  #appWrap,#appWrap .layout,#appWrap .main,#appWrap .content{
+    display:block!important;width:100%!important;height:auto!important;
+    overflow:visible!important;margin:0!important;padding:0!important;
+    border:none!important;box-shadow:none!important;
+  }
   #tab-label,.tab{display:block!important;margin:0!important;padding:0!important}
   .tab:not(#tab-label){display:none!important}
-  .card{border:none!important;box-shadow:none!important;padding:0!important;margin:0!important}
 
-  /* A4 인쇄 영역: 프린텍 2×6 기준 여백 */
+  /* 카드 외곽 여백·테두리 제거 */
+  #tab-label .card,
+  #tab-label .card-bd{
+    border:none!important;
+    box-shadow:none!important;
+    padding:0!important;
+    margin:0!important;
+    background:#fff!important;
+  }
+
+  /* A4 인쇄 영역: 위아래 여백 5mm (프린텍 2×6) */
+  /* 사용가능 높이: 297-5-5=287mm, 행높이: 287/6≈47.8mm */
   #lbl-preview{
     display:block!important;
     width:210mm!important;
     height:297mm!important;
-    padding:7mm 4mm 10mm 4mm!important;
+    padding:5mm 4mm 5mm 4mm!important;
     margin:0!important;
     overflow:hidden!important;
     box-sizing:border-box!important;
     background:#fff!important;
   }
 
-  /* 2×6 고정 grid: 1fr·vh 완전 제거 */
+  /* 2×6 고정 grid: mm 고정 (1fr·vh 사용 금지) */
   #lbl-grid{
     display:grid!important;
     grid-template-columns:repeat(2,99.4mm)!important;
-    grid-template-rows:repeat(6,46.2mm)!important;
+    grid-template-rows:repeat(6,47.8mm)!important;
     column-gap:3mm!important;
     row-gap:0!important;
     width:100%!important;
@@ -873,12 +902,12 @@ tr:hover td{background:#fafbfc}
     box-sizing:border-box!important;
   }
 
-  /* 라벨 카드: mm 고정 */
+  /* 라벨 카드 mm 고정 */
   #tab-label .lc{
     width:99.4mm!important;
-    height:46.2mm!important;
-    min-height:46.2mm!important;
-    max-height:46.2mm!important;
+    height:47.8mm!important;
+    min-height:47.8mm!important;
+    max-height:47.8mm!important;
     overflow:hidden!important;
     display:flex!important;
     flex-direction:row!important;
@@ -890,12 +919,12 @@ tr:hover td{background:#fafbfc}
     position:relative!important;
     box-sizing:border-box!important;
   }
-  /* 빈 슬롯: 높이 유지하되 내용 숨김 */
+  /* 빈 슬롯: 동일 높이 유지 + 내용 숨김 */
   #tab-label .lc.empty{
     visibility:hidden!important;
-    height:46.2mm!important;
-    min-height:46.2mm!important;
-    max-height:46.2mm!important;
+    height:47.8mm!important;
+    min-height:47.8mm!important;
+    max-height:47.8mm!important;
     border:none!important;
   }
 
