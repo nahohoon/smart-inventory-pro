@@ -1915,9 +1915,14 @@ function doLogin(){
   toast(user.name+'님 로그인 완료');
   try{ startAutoSync(); autoSyncAllSilent(); }catch(e){}
 }
-document.getElementById('loginBtn').addEventListener('click',doLogin);
-document.getElementById('loginPw').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
-document.getElementById('loginId').addEventListener('keydown',function(e){if(e.key==='Enter')document.getElementById('loginPw').focus();});
+document.addEventListener('DOMContentLoaded', function(){
+  var _btn = document.getElementById('loginBtn');
+  if(_btn){ _btn.addEventListener('click', doLogin); }
+  var _pw = document.getElementById('loginPw');
+  if(_pw){ _pw.addEventListener('keydown', function(e){ if(e.key==='Enter') doLogin(); }); }
+  var _id = document.getElementById('loginId');
+  if(_id){ _id.addEventListener('keydown', function(e){ if(e.key==='Enter'){ var pw=document.getElementById('loginPw'); if(pw) pw.focus(); } }); }
+});
 /* KY 로그아웃 */
 function kyDoLogout() {
   kyClearSession();
@@ -3263,8 +3268,7 @@ function injectPrintStyle(preset) {
     '#tab-label .lb{font-size:'+preset.codeFont+'pt!important}',
     '#tab-label .ls,#tab-label .lcat,#tab-label .lu{font-size:'+preset.specFont+'pt!important}',
     '}'
-  ].join('
-');
+  ].join('\n');
   var st = document.createElement('style');
   st.id = 'lbl-print-css';
   st.textContent = css;
