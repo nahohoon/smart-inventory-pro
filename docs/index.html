@@ -3175,7 +3175,7 @@ function stopAutoSync(){
 
 /* ─── QR 라벨 출력 (품목마스터 연동) ─── */
 var labelALL = [];
-var labelSLOTS = new Array(getTotalSlots()).fill(null);
+var labelSLOTS = [];
 
 /* ─── 라벨 프리셋: 2×6 / 3×8 ─── */
 var LABEL_PRESETS = {
@@ -3202,13 +3202,23 @@ var LABEL_PRESETS = {
 function getCurrentPreset() {
   var el = document.getElementById('labelPreset');
   var key = (el && el.value) || '2x6';
+  if (!LABEL_PRESETS) return {key:'2x6',cols:2,rows:6,width:99.4,height:47.8,qr:20,qrTable:20,nameFont:12,codeFont:10,specFont:8,padding:[2,2,2,5],gapX:3,gapY:0,pagePad:[5,4,5,4]};
   var p = LABEL_PRESETS[key] || LABEL_PRESETS['2x6'];
   return Object.assign({key:key}, p);
 }
 
 function getTotalSlots() {
+  if (!LABEL_PRESETS) return 12;
   var p = getCurrentPreset();
+  if (!p || !p.cols || !p.rows) return 12;
   return p.cols * p.rows;
+}
+
+function ensureLabelSlots() {
+  var total = getTotalSlots();
+  if (!Array.isArray(labelSLOTS)) labelSLOTS = [];
+  while (labelSLOTS.length < total) labelSLOTS.push(null);
+  if (labelSLOTS.length > total) labelSLOTS = labelSLOTS.slice(0, total);
 }
 
 function updateSSOptions() {
@@ -3301,6 +3311,8 @@ function rebuildLabelItems() {
 function initLabelTab() {
   if (_labelTabInited) return;
   _labelTabInited = true;
+  ensureLabelSlots();
+  updateSSOptions();
   rebuildLabelItems();
   renderGrid();
   var qEl = document.getElementById('lbl-q');
@@ -3376,13 +3388,11 @@ function tryQR(container, text, level, size) {
 }
 
 function renderGrid() {
-  var preset = getCurrentPreset();
-  var total = preset.cols * preset.rows;
-  while (labelSLOTS.length < total) labelSLOTS.push(null);
-  if (labelSLOTS.length > total) labelSLOTS = labelSLOTS.slice(0, total);
-
   var grid = document.getElementById('lbl-grid');
   if (!grid) return;
+  ensureLabelSlots();
+  var preset = getCurrentPreset();
+  var total = preset.cols * preset.rows;
 
   /* 화면 그리드 열 조정 */
   grid.style.gridTemplateColumns = 'repeat(' + preset.cols + ', 1fr)';
