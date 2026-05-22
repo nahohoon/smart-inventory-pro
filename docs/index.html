@@ -39,6 +39,7 @@
     background-color: #f0f4f8;
   }
 </style>
+<link rel="stylesheet" href="./label-print.css">
 
 <!-- 기본 파비콘 -->
 
@@ -1644,6 +1645,7 @@ tr:hover td{background:#fafbfc}
 <div id="toast"></div>
 
 <script src="label-qrcode.min.js"></script>
+<script src="./label-print.js"></script>
 <script>
 'use strict';
 /* ══════════════════════════════════════════════════════════════
@@ -3173,6 +3175,8 @@ function stopAutoSync(){
   }
 }
 
+/* [KY-LP] 인라인 라벨 코드: label-print.js 로드 시 건너뜀 (비활성화/우회 전략) */
+if (!window.LabelPrint) {
 /* ─── QR 라벨 출력 (품목마스터 연동) ─── */
 var labelALL = [];
 var labelSLOTS = [];
@@ -3543,6 +3547,7 @@ function hideSugg() {
   var sugg = document.getElementById('lbl-sugg');
   if (sugg) sugg.style.display = 'none';
 }
+} /* end if(!window.LabelPrint) */
 
 /* ─── 초기 시드 데이터 ─── */
 (function(){
