@@ -3175,7 +3175,7 @@ function stopAutoSync(){
 
 /* ─── QR 라벨 출력 (품목마스터 연동) ─── */
 var labelALL = [];
-var labelSLOTS = [null,null,null,null,null,null,null,null,null,null,null,null];
+var labelSLOTS = new Array(getTotalSlots()).fill(null);
 
 /* ─── 라벨 프리셋: 2×6 / 3×8 ─── */
 var LABEL_PRESETS = {
@@ -3333,8 +3333,9 @@ function lblShowMsg(txt, bg) {
 
 function updCnt() {
   var filled = labelSLOTS.filter(function(s) { return !!s; }).length;
+  var total = getTotalSlots();
   var badge = document.getElementById('lbl-slot-badge');
-  if (badge) badge.textContent = filled + '/12 슬롯';
+  if (badge) badge.textContent = filled + '/' + total + ' 슬롯';
   var hc = document.getElementById('lbl-hd-cnt');
   if (hc) hc.textContent = labelALL.length + '품목';
 }
@@ -3445,17 +3446,18 @@ function renderGrid() {
 function pick(item) {
   var qty = parseInt(document.getElementById('lbl-qty').value, 10) || 1;
   var ssVal = parseInt(document.getElementById('lbl-ss').value, 10);
+  var maxSlots = getTotalSlots();
   var start;
   if (!ssVal) {
     var lastFilled = -1;
-    for (var i = 0; i < 12; i++) { if (labelSLOTS[i]) lastFilled = i; }
+    for (var i = 0; i < maxSlots; i++) { if (labelSLOTS[i]) lastFilled = i; }
     start = lastFilled + 2;
-    if (start > 12) start = 1;
+    if (start > maxSlots) start = 1;
   } else {
     start = ssVal;
   }
   var added = 0, idx = start - 1;
-  while (added < qty && idx < 12) { labelSLOTS[idx] = item; added++; idx++; }
+  while (added < qty && idx < maxSlots) { labelSLOTS[idx] = item; added++; idx++; }
   renderGrid();
   lblShowMsg(added + '장 추가: ' + item.n);
   document.getElementById('lbl-q').value = '';
@@ -3475,15 +3477,27 @@ function doPrint() {
     lblShowMsg('슬롯에 품목을 먼저 추가하세요');
     return;
   }
+  var preset = getCurrentPreset();
+  injectPrintStyle(preset);
   document.querySelectorAll('#lbl-grid .qb canvas').forEach(function(cvs) {
-    if (!cvs.parentNode.querySelector('img')) {
+    if (!cvs.parentNode.querySelector('img.qb-print-img')) {
       var img = document.createElement('img');
+      img.className = 'qb-print-img';
       img.src = cvs.toDataURL('image/png');
       img.style.cssText = 'display:block;width:84px;height:84px;max-width:84px;max-height:84px';
       cvs.parentNode.appendChild(img);
     }
   });
-  setTimeout(function() { window.print(); }, 300);
+  setTimeout(function() {
+    window.print();
+    setTimeout(function() {
+      var st = document.getElementById('lbl-print-css');
+      if (st) st.parentNode.removeChild(st);
+      document.querySelectorAll('#lbl-grid .qb img.qb-print-img').forEach(function(img) {
+        img.parentNode.removeChild(img);
+      });
+    }, 500);
+  }, 300);
 }
 
 function qRes() {
