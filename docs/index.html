@@ -2572,9 +2572,18 @@ function getTxRowQty(r) {
   return 0;
 }
 
+/** 분할 검증용: getTx()에서 _txSplitIdx 행을 재조회해 거래 수량만 사용 */
+function getSplitOrigQtyFromTx() {
+  if (_txSplitIdx < 0) return 0;
+  var arr = getTx();
+  if (_txSplitIdx >= arr.length) return 0;
+  return getTxRowQty(arr[_txSplitIdx]);
+}
+
+/** 표시·UI 보조용 (검증·GAS origQty에는 사용하지 않음) */
 function getSplitOrigQty() {
   var el = document.getElementById('edS_origQty');
-  if (el && el.value !== '') return Number(el.value || 0);
+  if (el && el.value !== '' && Number(el.value) > 0) return Number(el.value || 0);
   if (_txSplitCtx && _txSplitCtx.origQty != null) return Number(_txSplitCtx.origQty);
   return Number(_txSplitOrigQty || 0);
 }
@@ -2789,7 +2798,7 @@ function onSplitCodeInput(code) {
 }
 
 function onSplitRemQtyInput() {
-  var origQ = getSplitOrigQty();
+  var origQ = getSplitOrigQtyFromTx();
   var rem = Number(document.getElementById('edS_remQty').value || 0);
   var split = Math.max(0, origQ - rem);
   document.getElementById('edS_splitQty').value = split;
@@ -2800,7 +2809,11 @@ function openTxSplit(idx) {
   if (idx < 0 || idx >= arr.length) { toast('거래를 찾을 수 없습니다'); return; }
   var r = arr[idx];
   var origQ = getTxRowQty(r);
-  if (origQ < 2) { toast('분할하려면 수량이 2 이상이어야 합니다'); return; }
+  if (origQ < 2) { toast('수량 2 이상만 분할 가능'); return; }
+  var splitModal = document.getElementById('txSplitModal');
+  if (splitModal && splitModal.classList.contains('open')) {
+    closeTxSplit();
+  }
   _txSplitIdx = idx;
   _txSplitOrigQty = origQ;
   _txSplitCtx = { idx: idx, origQty: origQ };
@@ -2828,14 +2841,15 @@ function closeTxSplit() {
 async function saveTxSplit() {
   if (_txSplitIdx < 0) return;
   var arr = getTx();
+  if (_txSplitIdx >= arr.length) { toast('거래를 찾을 수 없습니다'); return; }
   var orig = arr[_txSplitIdx];
   if (!orig) { toast('거래를 찾을 수 없습니다'); return; }
-  var origQty = getSplitOrigQty();
+  var origQty = getTxRowQty(orig);
   var remQty = Number(document.getElementById('edS_remQty').value || 0);
   var splitQty = Number(document.getElementById('edS_splitQty').value || 0);
   var splitCode = document.getElementById('edS_splitCode').value.trim();
   var splitName = document.getElementById('edS_splitName').value.trim();
-  if (origQty < 2) { toast('원본 거래 수량 정보가 없습니다. 분할을 다시 열어주세요.'); return; }
+  if (origQty < 2) { toast('수량 2 이상만 분할 가능'); return; }
   if (remQty < 0 || splitQty <= 0 || remQty + splitQty !== origQty) {
     toast('남길 수량 + 분할 수량 = 원본 수량(' + origQty + ')이어야 합니다');
     return;
@@ -2867,6 +2881,7 @@ async function saveTxSplit() {
     }
   }
   var gasParams = Object.assign(buildTxGasParams(orig, _txSplitIdx), {
+    origQty: origQty,
     remainQty: remQty,
     splitQty: splitQty,
     splitCode: splitCode,
