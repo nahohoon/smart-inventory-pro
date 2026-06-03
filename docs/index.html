@@ -39,7 +39,6 @@
     background-color: #f0f4f8;
   }
 </style>
-<link rel="stylesheet" href="./label-print.css">
 
 <!-- 기본 파비콘 -->
 
@@ -136,7 +135,7 @@ html,body{height:100%;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-ser
 .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 
 /* ── 이력 테이블 — 11컬럼 전용 스타일 ── */
-.hist-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:980px;table-layout:fixed}
+.hist-table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:1090px;table-layout:fixed}
 .hist-table col.col-date{width:10%}
 .hist-table col.col-barcode{width:9%}
 .hist-table col.col-name{width:18%}
@@ -147,7 +146,19 @@ html,body{height:100%;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-ser
 .hist-table col.col-stock{width:7.5%}
 .hist-table col.col-wh{width:8%}
 .hist-table col.col-site{width:10%}
-.hist-table col.col-mgr{width:9%}
+.hist-table col.col-mgr{width:8%}
+.hist-table col.col-actions{width:11%}
+.hist-table .hist-act-cell{white-space:normal;overflow:visible}
+.hist-act-btns{display:flex;flex-wrap:wrap;gap:4px;justify-content:center}
+.hist-act-btns .btn{padding:4px 7px;font-size:10.5px;min-height:auto;line-height:1.2}
+.modal-box.modal-box-wide{max-width:520px}
+.modal-box.modal-box-wide h3{color:#1e3a5f;font-size:16px;margin-bottom:14px}
+.modal-box .mf{margin-bottom:12px}
+.modal-box .mf label{display:block;font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px}
+.modal-box .mf input,.modal-box .mf select{width:100%;padding:9px 11px;border:1px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit}
+.modal-box .mf-ro{background:#f8fafc;color:#475569}
+.modal-frow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-ft{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;padding-top:14px;border-top:1px solid #f1f5f9}
 .hist-table th{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#e0eaff;font-size:11.5px;font-weight:700;padding:12px 10px;border-bottom:none;text-align:left;white-space:nowrap;position:sticky;top:0;z-index:2;letter-spacing:.02em;text-shadow:0 1px 2px rgba(0,0,0,.15)}
 .hist-table th:first-child{border-radius:0}
 .hist-table th.r{text-align:right}
@@ -1336,6 +1347,7 @@ tr:hover td{background:#fafbfc}
                   <col class="col-wh">
                   <col class="col-site">
                   <col class="col-mgr">
+                  <col class="col-actions">
                 </colgroup>
                 <thead>
                   <tr>
@@ -1350,6 +1362,7 @@ tr:hover td{background:#fafbfc}
                     <th>창고</th>
                     <th>현장명</th>
                     <th>담당자</th>
+                    <th class="c">관리</th>
                   </tr>
                 </thead>
                 <tbody id="histTbody"></tbody>
@@ -1590,6 +1603,9 @@ tr:hover td{background:#fafbfc}
                   품목삭제: <code>deleteMasterItem</code><br>
                   품목조회: <code>getMasterItems</code><br>
                   이력조회: <code>getTransactions</code><br>
+                  이력수정: <code>updateTransactionGet</code><br>
+                  이력삭제: <code>deleteTransactionGet</code><br>
+                  이력분할: <code>splitTransactionGet</code><br>
                   대시보드: <code>dashboard</code> / 테스트: <code>test</code>
                 </div>
                 <div class="set-info" style="margin-top:10px">
@@ -1606,6 +1622,60 @@ tr:hover td{background:#fafbfc}
     </div><!-- /main -->
   </div><!-- /layout -->
 </div><!-- /appWrap -->
+
+<!-- 입출고 이력 — 수정 모달 -->
+<div class="modal-bg" id="txEditModal">
+  <div class="modal-box modal-box-wide">
+    <h3>✏️ 거래 수정</h3>
+    <div class="mf"><label>일시 (유지)</label><input id="edE_date" class="mf-ro" readonly></div>
+    <div class="modal-frow">
+      <div class="mf"><label>구분</label><select id="edE_type" onchange="onTxEditTypeChange()"><option>입고</option><option>출고</option></select></div>
+      <div class="mf"><label>수량</label><input id="edE_qty" type="number" min="1"></div>
+    </div>
+    <div class="modal-frow">
+      <div class="mf"><label>품목코드</label><input id="edE_code" autocomplete="off"></div>
+      <div class="mf"><label>품목명</label><input id="edE_name"></div>
+    </div>
+    <div class="modal-frow">
+      <div class="mf"><label id="edE_priceLabel">입고가격 (원)</label><input id="edE_price" type="number" min="0"></div>
+      <div class="mf"><label>창고</label><select id="edE_wh"></select></div>
+    </div>
+    <div class="modal-frow">
+      <div class="mf"><label>담당자</label><input id="edE_manager"></div>
+      <div class="mf"><label>현장명 (유지)</label><input id="edE_site" class="mf-ro" readonly></div>
+    </div>
+    <div class="mf"><label>비고</label><input id="edE_note"></div>
+    <div class="modal-ft">
+      <button class="btn sec" onclick="closeTxEdit()">취소</button>
+      <button class="btn pri" onclick="saveTxEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 입출고 이력 — 분할 모달 -->
+<div class="modal-bg" id="txSplitModal">
+  <div class="modal-box modal-box-wide">
+    <h3>✂️ 거래 분할</h3>
+    <div class="mf"><label>일시 · 창고 · 담당자 · 비고 (공통 유지)</label>
+      <input id="edS_meta" class="mf-ro" readonly>
+    </div>
+    <div class="mf"><label>원본 거래</label><input id="edS_orig" class="mf-ro" readonly></div>
+    <div class="modal-frow">
+      <div class="mf"><label>원본에 남길 수량</label><input id="edS_remQty" type="number" min="0"></div>
+      <div class="mf"><label>분할 수량 (합계=원본)</label><input id="edS_splitQty" type="number" min="1" readonly class="mf-ro"></div>
+    </div>
+    <div class="modal-frow">
+      <div class="mf"><label>분할 품목코드</label><input id="edS_splitCode" list="edS_masterList" autocomplete="off" oninput="onSplitCodeInput(this.value)"></div>
+      <div class="mf"><label>분할 품목명</label><input id="edS_splitName"></div>
+    </div>
+    <datalist id="edS_masterList"></datalist>
+    <p style="font-size:12px;color:#64748b;margin:0 0 12px;line-height:1.6">예: A 입고 3 → A 입고 2 + B 입고 1</p>
+    <div class="modal-ft">
+      <button class="btn sec" onclick="closeTxSplit()">취소</button>
+      <button class="btn pri" onclick="saveTxSplit()">분할 저장</button>
+    </div>
+  </div>
+</div>
 
 <!-- 경고 모달 -->
 <div class="modal-bg" id="alertModal">
@@ -1645,7 +1715,6 @@ tr:hover td{background:#fafbfc}
 <div id="toast"></div>
 
 <script src="label-qrcode.min.js"></script>
-<script src="./label-print.js"></script>
 <script>
 'use strict';
 /* ══════════════════════════════════════════════════════════════
@@ -1691,9 +1760,11 @@ var CONFIG = {
   ACTION: {
     SAVE_TX:'saveTransactionGet', SAVE_MASTER:'saveMasterItemGet',
     DEL_MASTER:'deleteMasterItem', GET_MASTER:'getMasterItems',
-    GET_TX:'getTransactions', DASHBOARD:'dashboard', TEST:'test'
+    GET_TX:'getTransactions', DASHBOARD:'dashboard', TEST:'test',
+    UPDATE_TX:'updateTransactionGet', DEL_TX:'deleteTransactionGet', SPLIT_TX:'splitTransactionGet'
   }
 };
+var GAS_TX_NOT_DEPLOYED_MSG = '서버 기능이 아직 배포되지 않았습니다';
 
 (function syncDisplayDefaultsFromConfig(){
   if(!window.CONFIG) return;
@@ -2485,6 +2556,319 @@ function resetTxForm(withNow){
   applySettingsToForm(true);if(withNow)fillNow();hideStockPrev();document.getElementById('acList').classList.remove('open');
 }
 
+/* ─── 입출고 이력 수정·삭제·분할 ─── */
+var _txEditIdx = -1;
+var _txSplitIdx = -1;
+var _txSplitOrigQty = 0;
+
+function txRowsEqual(a, b) {
+  if (!a || !b) return false;
+  return String(a.date || '') === String(b.date || '')
+    && String(a.code || '').trim() === String(b.code || '').trim()
+    && String(a.name || '').trim() === String(b.name || '').trim()
+    && String(a.type || '') === String(b.type || '')
+    && Number(a.qty || 0) === Number(b.qty || 0)
+    && String(a.warehouse || a.wh || '') === String(b.warehouse || b.wh || '')
+    && String(a.site || '') === String(b.site || '')
+    && String(a.manager || '') === String(b.manager || '')
+    && String(a.note || '') === String(b.note || '');
+}
+
+function findTxIndex(arr, r) {
+  if (!arr || !r) return -1;
+  if (r._txIdx >= 0 && arr[r._txIdx] && txRowsEqual(arr[r._txIdx], r)) return r._txIdx;
+  for (var i = 0; i < arr.length; i++) {
+    if (txRowsEqual(arr[i], r)) return i;
+  }
+  return -1;
+}
+
+function txDisplayDate(r) {
+  var dt2 = new Date(r.date);
+  return isNaN(dt2) ? (r.date || '') : dt2.toLocaleString('ko-KR', { year: '2-digit', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
+
+function buildTxGasParams(r, idx) {
+  var isIn = r.type === '입고';
+  var inP = Number(r.inPrice != null ? r.inPrice : (isIn ? (r.price || 0) : 0));
+  var outP = Number(r.outPrice != null ? r.outPrice : (!isIn ? (r.price || 0) : 0));
+  return {
+    rowIndex: (idx >= 0 ? idx + 2 : ''),
+    txIndex: idx >= 0 ? idx : '',
+    date: r.date || '',
+    type: r.type || '',
+    code: r.code || '',
+    name: r.name || '',
+    qty: Number(r.qty || 0),
+    price: isIn ? inP : outP,
+    inPrice: inP,
+    outPrice: outP,
+    warehouse: r.warehouse || r.wh || '',
+    site: r.site || '',
+    manager: r.manager || '',
+    note: r.note || ''
+  };
+}
+
+function isGasTxNotDeployed(err) {
+  var m = (err && err.message) ? String(err.message) : String(err || '');
+  return /알 수 없는 action|updateTransactionGet|deleteTransactionGet|splitTransactionGet|not deployed|아직 배포/i.test(m);
+}
+
+function gasTxCall(action, params) {
+  return gasGet(action, params).catch(function(e) {
+    if (isGasTxNotDeployed(e)) {
+      showAlert('⚠️ ' + GAS_TX_NOT_DEPLOYED_MSG, 'GAS 서버에 <code>' + action + '</code> 기능이 아직 추가되지 않았습니다.<br>Code.gs 배포 후 다시 시도해주세요.');
+      return Promise.reject(new Error(GAS_TX_NOT_DEPLOYED_MSG));
+    }
+    return Promise.reject(e);
+  });
+}
+
+function fillEdEWhSelect(selected) {
+  var el = document.getElementById('edE_wh');
+  if (!el) return;
+  var wh = CONFIG.WAREHOUSES || [];
+  el.innerHTML = wh.map(function(w) { return '<option value="' + w + '">' + w + '</option>'; }).join('');
+  if (selected) el.value = selected;
+}
+
+function onTxEditTypeChange() {
+  var t = document.getElementById('edE_type').value;
+  document.getElementById('edE_priceLabel').textContent = t === '출고' ? '출고가격 (원)' : '입고가격 (원)';
+}
+
+function openTxEdit(idx) {
+  var arr = getTx();
+  if (idx < 0 || idx >= arr.length) { toast('거래를 찾을 수 없습니다'); return; }
+  _txEditIdx = idx;
+  var r = arr[idx];
+  document.getElementById('edE_date').value = txDisplayDate(r);
+  document.getElementById('edE_type').value = r.type || '입고';
+  document.getElementById('edE_code').value = r.code || '';
+  document.getElementById('edE_name').value = r.name || '';
+  document.getElementById('edE_qty').value = Number(r.qty || 1);
+  var isIn = r.type === '입고';
+  document.getElementById('edE_price').value = isIn ? (r.inPrice || r.price || '') : (r.outPrice || r.price || '');
+  fillEdEWhSelect(r.warehouse || r.wh || CONFIG.WAREHOUSES[0]);
+  document.getElementById('edE_manager').value = r.manager || '';
+  document.getElementById('edE_site').value = r.site || '';
+  document.getElementById('edE_note').value = r.note || '';
+  onTxEditTypeChange();
+  document.getElementById('txEditModal').classList.add('open');
+}
+
+function closeTxEdit() {
+  _txEditIdx = -1;
+  document.getElementById('txEditModal').classList.remove('open');
+}
+
+function readTxEditRow(orig) {
+  var row = {
+    date: orig.date,
+    type: document.getElementById('edE_type').value,
+    code: document.getElementById('edE_code').value.trim(),
+    name: document.getElementById('edE_name').value.trim(),
+    qty: Number(document.getElementById('edE_qty').value || 0),
+    price: Number(document.getElementById('edE_price').value || 0),
+    manager: document.getElementById('edE_manager').value.trim(),
+    warehouse: document.getElementById('edE_wh').value,
+    site: orig.site || '',
+    note: document.getElementById('edE_note').value.trim()
+  };
+  if (row.type === '입고') { row.inPrice = row.price; row.outPrice = 0; }
+  else { row.inPrice = 0; row.outPrice = row.price; }
+  return row;
+}
+
+async function saveTxEdit() {
+  if (_txEditIdx < 0) return;
+  var arr = getTx();
+  var orig = arr[_txEditIdx];
+  if (!orig) { toast('거래를 찾을 수 없습니다'); return; }
+  var row = readTxEditRow(orig);
+  if (!row.code || !row.name || !row.qty) { toast('품목코드, 품목명, 수량을 입력하세요'); return; }
+  if (row.type === '출고') {
+    var item = calcStock().rows.filter(function(r) { return r.code === row.code; })[0];
+    if (item) {
+      var whs = item[row.warehouse] != null ? item[row.warehouse] : 0;
+      var adj = (orig.code === row.code && orig.warehouse === row.warehouse) ? Number(orig.qty || 0) : 0;
+      if (row.qty > whs + adj) {
+        showAlert('⚠️ 출고 수량 초과', '[' + row.name + '] ' + row.warehouse + ' 현재고: <strong>' + fmt(whs) + '</strong>');
+        return;
+      }
+    }
+  }
+  var s = getSettings();
+  var gasParams = Object.assign(buildTxGasParams(orig, _txEditIdx), buildTxGasParams(row, _txEditIdx), { origDate: orig.date, origCode: orig.code, origQty: orig.qty });
+  if (s.useGas === 'Y') {
+    try {
+      showLoad(true);
+      await gasTxCall(CONFIG.ACTION.UPDATE_TX, gasParams);
+      arr[_txEditIdx] = row;
+      setTx(arr);
+      await syncTxSilent();
+    } catch (e) {
+      if (e.message !== GAS_TX_NOT_DEPLOYED_MSG) showAlert('❌ 수정 실패', '<code>' + e.message + '</code>');
+      showLoad(false);
+      return;
+    } finally { showLoad(false); }
+  } else {
+    arr[_txEditIdx] = row;
+    setTx(arr);
+  }
+  closeTxEdit();
+  renderDash(); renderRegRecent(); renderHist(); renderStock(); renderShort();
+  toast('✅ 거래 수정 완료');
+}
+
+function confirmDeleteTx(idx) {
+  var arr = getTx();
+  if (idx < 0 || idx >= arr.length) { toast('거래를 찾을 수 없습니다'); return; }
+  var r = arr[idx];
+  var msg = (r.name || r.code || '') + ' · ' + (r.type || '') + ' ' + fmt(r.qty) + '\n이 거래를 삭제하시겠습니까?';
+  if (!confirm(msg)) return;
+  deleteTx(idx);
+}
+
+async function deleteTx(idx) {
+  var arr = getTx();
+  if (idx < 0 || idx >= arr.length) return;
+  var orig = arr[idx];
+  var s = getSettings();
+  if (s.useGas === 'Y') {
+    try {
+      showLoad(true);
+      await gasTxCall(CONFIG.ACTION.DEL_TX, buildTxGasParams(orig, idx));
+      arr.splice(idx, 1);
+      setTx(arr);
+      await syncTxSilent();
+    } catch (e) {
+      if (e.message !== GAS_TX_NOT_DEPLOYED_MSG) showAlert('❌ 삭제 실패', '<code>' + e.message + '</code>');
+      showLoad(false);
+      return;
+    } finally { showLoad(false); }
+  } else {
+    arr.splice(idx, 1);
+    setTx(arr);
+  }
+  renderDash(); renderRegRecent(); renderHist(); renderStock(); renderShort();
+  toast('✅ 거래 삭제 완료');
+}
+
+function fillSplitMasterDatalist() {
+  var dl = document.getElementById('edS_masterList');
+  if (!dl) return;
+  dl.innerHTML = getMaster().map(function(m) {
+    return '<option value="' + (m.code || '') + '">' + (m.name || '') + '</option>';
+  }).join('');
+}
+
+function onSplitCodeInput(code) {
+  var c = String(code || '').trim().toLowerCase();
+  var hit = getMaster().filter(function(m) { return String(m.code || '').toLowerCase() === c; })[0];
+  if (hit) document.getElementById('edS_splitName').value = hit.name || '';
+}
+
+function onSplitRemQtyInput() {
+  var rem = Number(document.getElementById('edS_remQty').value || 0);
+  var split = Math.max(0, _txSplitOrigQty - rem);
+  document.getElementById('edS_splitQty').value = split;
+}
+
+function openTxSplit(idx) {
+  var arr = getTx();
+  if (idx < 0 || idx >= arr.length) { toast('거래를 찾을 수 없습니다'); return; }
+  _txSplitIdx = idx;
+  var r = arr[idx];
+  _txSplitOrigQty = Number(r.qty || 0);
+  if (_txSplitOrigQty < 2) { toast('분할하려면 수량이 2 이상이어야 합니다'); return; }
+  document.getElementById('edS_meta').value = txDisplayDate(r) + ' · ' + (r.warehouse || '') + ' · ' + (r.manager || '') + (r.note ? ' · ' + r.note : '');
+  document.getElementById('edS_orig').value = (r.code || '') + ' ' + (r.name || '') + ' · ' + (r.type || '') + ' ' + fmt(_txSplitOrigQty);
+  document.getElementById('edS_remQty').value = Math.max(1, _txSplitOrigQty - 1);
+  document.getElementById('edS_remQty').oninput = onSplitRemQtyInput;
+  document.getElementById('edS_splitCode').value = '';
+  document.getElementById('edS_splitName').value = '';
+  onSplitRemQtyInput();
+  fillSplitMasterDatalist();
+  document.getElementById('txSplitModal').classList.add('open');
+}
+
+function closeTxSplit() {
+  _txSplitIdx = -1;
+  _txSplitOrigQty = 0;
+  document.getElementById('txSplitModal').classList.remove('open');
+}
+
+async function saveTxSplit() {
+  if (_txSplitIdx < 0) return;
+  var arr = getTx();
+  var orig = arr[_txSplitIdx];
+  if (!orig) { toast('거래를 찾을 수 없습니다'); return; }
+  var remQty = Number(document.getElementById('edS_remQty').value || 0);
+  var splitQty = Number(document.getElementById('edS_splitQty').value || 0);
+  var splitCode = document.getElementById('edS_splitCode').value.trim();
+  var splitName = document.getElementById('edS_splitName').value.trim();
+  if (remQty < 0 || splitQty <= 0 || remQty + splitQty !== _txSplitOrigQty) {
+    toast('남길 수량 + 분할 수량 = 원본 수량(' + _txSplitOrigQty + ')이어야 합니다');
+    return;
+  }
+  if (!splitCode || !splitName) { toast('분할 품목코드·품목명을 입력하세요'); return; }
+  var remainRow = Object.assign({}, orig, { qty: remQty });
+  var splitRow = {
+    date: orig.date,
+    type: orig.type,
+    code: splitCode,
+    name: splitName,
+    qty: splitQty,
+    price: orig.price,
+    inPrice: orig.inPrice,
+    outPrice: orig.outPrice,
+    manager: orig.manager || '',
+    warehouse: orig.warehouse || orig.wh || '',
+    site: orig.site || '',
+    note: orig.note || ''
+  };
+  if (splitRow.type === '출고') {
+    var item = calcStock().rows.filter(function(r) { return r.code === splitRow.code; })[0];
+    if (item) {
+      var whs = item[splitRow.warehouse] != null ? item[splitRow.warehouse] : 0;
+      if (splitQty > whs) {
+        showAlert('⚠️ 출고 수량 초과', '[' + splitName + '] 분할 출고 수량이 현재고를 초과합니다.');
+        return;
+      }
+    }
+  }
+  var gasParams = Object.assign(buildTxGasParams(orig, _txSplitIdx), {
+    remainQty: remQty,
+    splitQty: splitQty,
+    splitCode: splitCode,
+    splitName: splitName
+  });
+  var s = getSettings();
+  if (s.useGas === 'Y') {
+    try {
+      showLoad(true);
+      await gasTxCall(CONFIG.ACTION.SPLIT_TX, gasParams);
+      arr[_txSplitIdx] = remainRow;
+      arr.push(splitRow);
+      setTx(arr);
+      await syncTxSilent();
+    } catch (e) {
+      if (e.message !== GAS_TX_NOT_DEPLOYED_MSG) showAlert('❌ 분할 실패', '<code>' + e.message + '</code>');
+      showLoad(false);
+      return;
+    } finally { showLoad(false); }
+  } else {
+    arr[_txSplitIdx] = remainRow;
+    arr.push(splitRow);
+    setTx(arr);
+  }
+  closeTxSplit();
+  renderDash(); renderRegRecent(); renderHist(); renderStock(); renderShort();
+  toast('✅ 거래 분할 완료');
+}
+
 /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
    ★ v7 — 입출고 이력 검색·기간·다운로드 강화
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
@@ -2610,8 +2994,11 @@ function renderHist() {
   if (_hPage > tp2) _hPage = tp2;
   var pg = rows.slice((_hPage - 1) * ps, _hPage * ps);
 
+  var rawForIdx = getTx();
   document.getElementById('histTbody').innerHTML = pg.length
     ? pg.map(function(r) {
+        var txIdx = findTxIndex(rawForIdx, r);
+        r._txIdx = txIdx;
         var dt2 = new Date(r.date);
         var ds  = isNaN(dt2) ? r.date : dt2.toLocaleString('ko-KR', {year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
         var isIn = r.type === '입고';
@@ -2620,6 +3007,13 @@ function renderHist() {
         var stk     = r._runningStock != null ? r._runningStock : 0;
         var stkCls  = stk === 0 ? 'stock-zero' : stk <= 5 ? 'stock-low' : 'stock-ok';
         var stkCell = '<span class="stock-cell '+stkCls+'">'+fmt(stk)+'</span>';
+        var actCell = txIdx >= 0
+          ? '<div class="hist-act-btns">'
+            + '<button type="button" class="btn sec" onclick="openTxEdit('+txIdx+')">수정</button>'
+            + '<button type="button" class="btn dan" onclick="confirmDeleteTx('+txIdx+')">삭제</button>'
+            + '<button type="button" class="btn sec" onclick="openTxSplit('+txIdx+')">분할</button>'
+            + '</div>'
+          : '<span style="color:#cbd5e1;font-size:10px">-</span>';
         return '<tr>'
           + '<td class="td-date">'                               + ds              + '</td>'
           + '<td class="td-code">'                               + (r.code||'')   + '</td>'
@@ -2632,9 +3026,10 @@ function renderHist() {
           + '<td class="td-wh">'                                 + (r.warehouse||'') + '</td>'
           + '<td class="td-site">'                               + (r.site||'')   + '</td>'
           + '<td class="td-mgr">'                                + (r.manager||'')+ '</td>'
+          + '<td class="c hist-act-cell">'                       + actCell        + '</td>'
           + '</tr>';
       }).join('')
-    : '<tr><td colspan="11" style="text-align:center;color:#94a3b8;padding:40px 24px;font-size:13px">📭 조회된 데이터가 없습니다</td></tr>';
+    : '<tr><td colspan="12" style="text-align:center;color:#94a3b8;padding:40px 24px;font-size:13px">📭 조회된 데이터가 없습니다</td></tr>';
 
   var pager = document.getElementById('histPager');
   if (rows.length > ps) {
@@ -2974,7 +3369,8 @@ function normalizeTxRow(r){
     wh:           wh,
     site:         site,
     siteName:     site,
-    manager:      r.manager || ''
+    manager:      r.manager || '',
+    note:         r.note || r.memo || ''
   };
 }
 
@@ -3175,8 +3571,6 @@ function stopAutoSync(){
   }
 }
 
-/* [KY-LP] 인라인 라벨 코드: label-print.js 로드 시 건너뜀 (비활성화/우회 전략) */
-if (!window.LabelPrint) {
 /* ─── QR 라벨 출력 (품목마스터 연동) ─── */
 var labelALL = [];
 var labelSLOTS = [];
@@ -3547,7 +3941,6 @@ function hideSugg() {
   var sugg = document.getElementById('lbl-sugg');
   if (sugg) sugg.style.display = 'none';
 }
-} /* end if(!window.LabelPrint) */
 
 /* ─── 초기 시드 데이터 ─── */
 (function(){
