@@ -1,5 +1,5 @@
 /* KY 재고관리 안정형 PWA Service Worker */
-const CACHE_NAME = 'ky-inventory-cache-v2-20260603';
+const CACHE_NAME = 'ky-inventory-cache-v1';
 const CACHE_PREFIX = 'ky-inventory-cache-';
 
 const APP_SHELL = [
@@ -10,53 +10,27 @@ const APP_SHELL = [
   './icons/icon-512.png'
 ];
 
-function isHtmlRequest(req) {
-  if (req.mode === 'navigate' || req.destination === 'document') return true;
-  try {
-    var path = new URL(req.url).pathname;
-    return /\/index\.html$/i.test(path) || path.endsWith('/');
-  } catch (e) {
-    return false;
-  }
-}
-
-function purgeLegacyCaches() {
-  return caches.keys().then(function(keys) {
-    return Promise.all(
-      keys
-        .filter(function(key) {
-          return key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME;
-        })
-        .map(function(key) {
-          return caches.delete(key);
-        })
-    );
-  });
-}
-
-self.addEventListener('install', function(event) {
+self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
-    purgeLegacyCaches()
-      .then(function() {
-        return caches.open(CACHE_NAME);
-      })
-      .then(function(cache) {
-        return cache.addAll(APP_SHELL);
-      })
+    caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL))
   );
 });
 
-self.addEventListener('activate', function(event) {
+self.addEventListener('activate', event => {
   event.waitUntil(
-    purgeLegacyCaches().then(function() {
-      return self.clients.claim();
-    })
+    caches.keys().then(keys =>
+      Promise.all(
+        keys
+          .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+          .map(key => caches.delete(key))
+      )
+    ).then(() => self.clients.claim())
   );
 });
 
-self.addEventListener('fetch', function(event) {
-  var req = event.request;
+self.addEventListener('fetch', event => {
+  const req = event.request;
 
   // Apps Script 및 외부 API는 캐시 제외
   if (
@@ -67,36 +41,28 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // index.html / 문서: 네트워크 우선 (최신 배포 반영)
-  if (isHtmlRequest(req)) {
+  // HTML은 네트워크 우선
+  if (req.mode === 'navigate' || req.destination === 'document') {
     event.respondWith(
-      fetch(req, { cache: 'no-store' })
-        .then(function(res) {
-          if (res && res.ok) {
-            var copy = res.clone();
-            caches.open(CACHE_NAME).then(function(cache) {
-              cache.put('./index.html', copy);
-            });
-          }
+      fetch(req)
+        .then(res => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put('./index.html', copy));
           return res;
         })
-        .catch(function() {
-          return caches.match('./index.html');
-        })
+        .catch(() => caches.match('./index.html'))
     );
     return;
   }
 
   // 나머지는 캐시 우선
   event.respondWith(
-    caches.match(req).then(function(cached) {
+    caches.match(req).then(cached => {
       return (
         cached ||
-        fetch(req).then(function(res) {
-          var copy = res.clone();
-          caches.open(CACHE_NAME).then(function(cache) {
-            cache.put(req, copy);
-          });
+        fetch(req).then(res => {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(req, copy));
           return res;
         })
       );

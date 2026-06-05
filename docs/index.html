@@ -1627,7 +1627,7 @@ tr:hover td{background:#fafbfc}
 <div class="modal-bg" id="txEditModal">
   <div class="modal-box modal-box-wide">
     <h3>✏️ 거래 수정</h3>
-    <div class="mf"><label>일시</label><input id="edE_date" type="datetime-local"></div>
+    <div class="mf"><label>일시 (유지)</label><input id="edE_date" class="mf-ro" readonly></div>
     <div class="modal-frow">
       <div class="mf"><label>구분</label><select id="edE_type" onchange="onTxEditTypeChange()"><option>입고</option><option>출고</option></select></div>
       <div class="mf"><label>수량</label><input id="edE_qty" type="number" min="1"></div>
@@ -1835,10 +1835,6 @@ function fmt(n){return Number(n||0).toLocaleString('ko-KR');}
 function fmtPrice(n){if(!n&&n!==0)return '';var v=Number(n);if(isNaN(v)||v===0)return '';return v.toLocaleString('ko-KR')+'원';}
 /* isoD: 아래 _parseDate 기반 버전으로 대체됨 (1384번 줄) */
 function nowISO(){var d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16);}
-function ensureTxDateEditable(el){if(!el)return;el.removeAttribute('readonly');el.removeAttribute('disabled');el.readOnly=false;el.disabled=false;}
-function txDateLocalToISO(localVal){if(!localVal)return '';var d=new Date(localVal);return isNaN(d.getTime())?'':d.toISOString();}
-function txISOToLocal(isoVal){if(!isoVal)return '';var d=new Date(isoVal);if(isNaN(d.getTime()))return '';d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,16);}
-function initTxDateDefault(){var el=document.getElementById('txDate');if(!el)return;ensureTxDateEditable(el);if(!el.value)el.value=nowISO();}
 function coName(){return (getSettings().company||CONFIG.COMPANY).replace(/[\\/:*?"<>|]/g,'');}
 var _toastTimer;
 function toast(msg){var el=document.getElementById('toast');if(!el)return;el.textContent=msg;el.classList.add('show');clearTimeout(_toastTimer);_toastTimer=setTimeout(function(){el.classList.remove('show');},2400);}
@@ -1947,7 +1943,7 @@ function kyRestoreSession() {
   try { applyBrand(); } catch(e) {}
   try { initLogoPreview(); } catch(e) {}
   try { initWhSelects(); } catch(e) {}
-  try { initTxDateDefault(); } catch(e) {}
+  try { fillNow(); } catch(e) {}
   try { applySettingsToForm(true); } catch(e) {}
   try { document.getElementById('todayTxt').textContent =
     new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'}); } catch(e) {}
@@ -1980,7 +1976,7 @@ function doLogin(){
   try{applyBrand();}catch(e){}
   try{initLogoPreview();}catch(e){}
   try{initWhSelects();}catch(e){}
-  try{initTxDateDefault();}catch(e){}
+  try{fillNow();}catch(e){}
   try{applySettingsToForm(true);}catch(e){}
   try{var sb=document.getElementById('sync-banner');if(sb)sb.classList.add('show');}catch(e){}
   try{document.getElementById('todayTxt').textContent=new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'short'});}catch(e){}
@@ -2376,12 +2372,7 @@ function drawDonut(canvasId,labels,data,colors){
 }
 
 /* ─── 입출고 등록 ─── */
-function fillNow(){
-  var el=document.getElementById('txDate');
-  if(!el)return;
-  ensureTxDateEditable(el);
-  el.value=nowISO();
-}
+function fillNow(){document.getElementById('txDate').value=nowISO();}
 
 function onTxTypeChange(){
   var t=document.getElementById('txType').value;
@@ -2509,12 +2500,8 @@ document.addEventListener('click',function(e){
 });
 
 async function saveTx(){
-  var txDateEl=document.getElementById('txDate');
-  var dateLocal=txDateEl?(txDateEl.value||'').trim():'';
-  var dateISO=txDateLocalToISO(dateLocal);
-  if(!dateISO){toast('일시를 입력하세요');return;}
   var row={
-    date: dateISO,
+    date: document.getElementById('txDate').value?new Date(document.getElementById('txDate').value).toISOString():new Date().toISOString(),
     type: document.getElementById('txType').value,
     code: document.getElementById('txCode').value.trim(),
     name: document.getElementById('txName').value.trim(),
@@ -2562,16 +2549,11 @@ async function saveTx(){
 }
 function resetTxForm(withNow){
   if(withNow===undefined)withNow=true;
-  var txDateEl=document.getElementById('txDate');
-  var keepDate=txDateEl?txDateEl.value:'';
   document.getElementById('txType').value='입고';document.getElementById('txCode').value='';document.getElementById('txName').value='';
   document.getElementById('txQty').value=1;document.getElementById('txPrice').value='';
   document.getElementById('txSite').value='';document.getElementById('txNote').value='';
   document.getElementById('priceLabel').textContent='입고가격 (원)';
-  applySettingsToForm(true);
-  if(withNow){fillNow();}
-  else if(txDateEl){ensureTxDateEditable(txDateEl);txDateEl.value=keepDate;}
-  hideStockPrev();document.getElementById('acList').classList.remove('open');
+  applySettingsToForm(true);if(withNow)fillNow();hideStockPrev();document.getElementById('acList').classList.remove('open');
 }
 
 /* ─── 입출고 이력 수정·삭제·분할 ─── */
@@ -2661,8 +2643,7 @@ function openTxEdit(idx) {
   if (idx < 0 || idx >= arr.length) { toast('거래를 찾을 수 없습니다'); return; }
   _txEditIdx = idx;
   var r = arr[idx];
-  var edDateEl=document.getElementById('edE_date');
-  if(edDateEl){edDateEl.removeAttribute('readonly');edDateEl.removeAttribute('disabled');edDateEl.readOnly=false;edDateEl.disabled=false;edDateEl.value=txISOToLocal(r.date);}
+  document.getElementById('edE_date').value = txDisplayDate(r);
   document.getElementById('edE_type').value = r.type || '입고';
   document.getElementById('edE_code').value = r.code || '';
   document.getElementById('edE_name').value = r.name || '';
@@ -2683,9 +2664,8 @@ function closeTxEdit() {
 }
 
 function readTxEditRow(orig) {
-  var dateLocal=(document.getElementById('edE_date').value||'').trim();
   var row = {
-    date: txDateLocalToISO(dateLocal),
+    date: orig.date,
     type: document.getElementById('edE_type').value,
     code: document.getElementById('edE_code').value.trim(),
     name: document.getElementById('edE_name').value.trim(),
@@ -2707,7 +2687,6 @@ async function saveTxEdit() {
   var orig = arr[_txEditIdx];
   if (!orig) { toast('거래를 찾을 수 없습니다'); return; }
   var row = readTxEditRow(orig);
-  if (!row.date) { toast('일시를 입력하세요'); return; }
   if (!row.code || !row.name || !row.qty) { toast('품목코드, 품목명, 수량을 입력하세요'); return; }
   if (row.type === '출고') {
     var item = calcStock().rows.filter(function(r) { return r.code === row.code; })[0];
