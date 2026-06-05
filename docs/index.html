@@ -1930,12 +1930,37 @@ function kyGetUsers() {
 function kySetUsers(arr) {
   try { localStorage.setItem(KY_USERS_KEY, JSON.stringify(arr)); } catch(e) {}
 }
+function kyGetLoginUsers() {
+  var byId = {};
+  var i, u, nid;
+  for (i = 0; i < CONFIG.USERS.length; i++) {
+    u = CONFIG.USERS[i];
+    if (!u || !u.id) continue;
+    byId[normalizeLoginId(u.id)] = u;
+  }
+  try {
+    var s = localStorage.getItem(KY_USERS_KEY);
+    if (s) {
+      var a = JSON.parse(s);
+      if (Array.isArray(a)) {
+        for (i = 0; i < a.length; i++) {
+          u = a[i];
+          if (!u || !u.id) continue;
+          nid = normalizeLoginId(u.id);
+          if (!byId[nid]) byId[nid] = u;
+        }
+      }
+    }
+  } catch (e) {}
+  var out = [];
+  for (nid in byId) { if (byId.hasOwnProperty(nid)) out.push(byId[nid]); }
+  return out;
+}
 function kyFindLoginUser(id) {
   var nid = normalizeLoginId(id);
   if (!nid) return null;
-  var list = kyGetUsers();
+  var list = kyGetLoginUsers();
   for (var i = 0; i < list.length; i++) { if (normalizeLoginId(list[i].id) === nid) return list[i]; }
-  for (var j = 0; j < CONFIG.USERS.length; j++) { if (normalizeLoginId(CONFIG.USERS[j].id) === nid) return CONFIG.USERS[j]; }
   return null;
 }
 function kyGetUserById(id) {
@@ -4165,7 +4190,7 @@ function hideSugg() {
 (function(){
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function(){
-      navigator.serviceWorker.register('./sw.js?v=20260605-loginrecover')
+      navigator.serviceWorker.register('./sw.js?v=20260605-loginusers')
         .then(function(reg){ console.log('ServiceWorker registered:', reg.scope); })
         .catch(function(err){ console.warn('ServiceWorker registration failed:', err); });
     });
