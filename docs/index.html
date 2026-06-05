@@ -215,7 +215,11 @@ tr:hover td{background:#fafbfc}
 
 /* ── 자동완성 ── */
 .ac-wrap{position:relative}
-.ac-list{display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #93c5fd;border-top:none;border-radius:0 0 10px 10px;z-index:50;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+.ac-wrap.ac-open{z-index:400}
+.frow.ac-row-open,.frow3.ac-row-open,.frow4.ac-row-open,.modal-frow.ac-row-open{position:relative;z-index:400}
+.card:has(.ac-list.open),.card-bd:has(.ac-list.open){overflow:visible}
+.modal-box:has(.ac-list.open){overflow:visible}
+.ac-list{display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #93c5fd;border-top:none;border-radius:0 0 10px 10px;z-index:401;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.12)}
 .ac-list.open{display:block}
 .ac-item{padding:9px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid #f1f5f9}
 .ac-item:hover{background:#eff6ff}
@@ -1183,12 +1187,12 @@ tr:hover td{background:#fafbfc}
                   <div class="fg ac-wrap">
                     <label>품목코드 (바코드)</label>
                     <!-- ★ 바코드 입력 시 즉시 연동 및 Enter 키 동작 처리 추가 -->
-                    <input id="txCode" placeholder="코드 / 바코드 스캔" autocomplete="off" oninput="onCodeInput(this.value,'tx')" onkeydown="if(event.key==='Enter'){event.preventDefault(); onCodeEnter(this.value,'tx');}">
+                    <input id="txCode" placeholder="코드 / 바코드 스캔" autocomplete="off" spellcheck="false" oninput="onCodeInput(this.value,'tx')" onkeydown="if(event.key==='Enter'){event.preventDefault(); onCodeEnter(this.value,'tx');}">
                     <div class="ac-list" id="acListCode"></div>
                   </div>
                   <div class="fg ac-wrap">
                     <label>품목명 <span style="color:#2563eb;font-size:11px">↓ 자동완성</span></label>
-                    <input id="txName" placeholder="품목명 입력" autocomplete="off" oninput="onNameInput(this.value)">
+                    <input id="txName" placeholder="품목명 입력" autocomplete="off" spellcheck="false" oninput="onNameInput(this.value)">
                     <div class="ac-list" id="acList"></div>
                   </div>
                 </div>
@@ -1413,12 +1417,12 @@ tr:hover td{background:#fafbfc}
                 <div class="frow">
                   <div class="fg ac-wrap">
                     <label>품목코드</label>
-                    <input id="mCode" autocomplete="off" oninput="onCodeInput(this.value,'m')">
+                    <input id="mCode" autocomplete="off" spellcheck="false" oninput="onCodeInput(this.value,'m')">
                     <div class="ac-list" id="mAcListCode"></div>
                   </div>
                   <div class="fg ac-wrap">
                     <label>품목명</label>
-                    <input id="mName" autocomplete="off" oninput="onMNameInput(this.value)">
+                    <input id="mName" autocomplete="off" spellcheck="false" oninput="onMNameInput(this.value)">
                     <div class="ac-list" id="mAcListName"></div>
                   </div>
                 </div>
@@ -1635,12 +1639,12 @@ tr:hover td{background:#fafbfc}
     <div class="modal-frow">
       <div class="mf ac-wrap">
         <label>품목코드</label>
-        <input id="edE_code" autocomplete="off" oninput="onCodeInput(this.value,'edE')">
+        <input id="edE_code" autocomplete="off" spellcheck="false" oninput="onCodeInput(this.value,'edE')">
         <div class="ac-list" id="edE_acListCode"></div>
       </div>
       <div class="mf ac-wrap">
         <label>품목명</label>
-        <input id="edE_name" autocomplete="off" oninput="onEdENameInput(this.value)">
+        <input id="edE_name" autocomplete="off" spellcheck="false" oninput="onEdENameInput(this.value)">
         <div class="ac-list" id="edE_acListName"></div>
       </div>
     </div>
@@ -2447,15 +2451,35 @@ function findMasterByCodeNormalized(code) {
   return null;
 }
 
+function acWrapOf(listEl){
+  var p=listEl&&listEl.parentElement;
+  return p&&p.classList.contains('ac-wrap')?p:null;
+}
+function setAcOpenState(listEl,open){
+  var wrap=acWrapOf(listEl);
+  var row=wrap?wrap.closest('.frow,.frow3,.frow4,.modal-frow'):null;
+  if(wrap)wrap.classList.toggle('ac-open',!!open);
+  if(row)row.classList.toggle('ac-row-open',!!open);
+}
+function closeAllAcLists(){
+  ['acList','acListCode','mAcListCode','mAcListName','edE_acListCode','edE_acListName'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(!el)return;
+    el.classList.remove('open');
+    el.innerHTML='';
+    setAcOpenState(el,false);
+  });
+}
 /* ── 자동완성 공통: 후보 목록 렌더 ── */
 function renderAcList(listEl,items,onSelect){
-  if(!items.length){listEl.classList.remove('open');return;}
+  if(!items.length){listEl.classList.remove('open');listEl.innerHTML='';setAcOpenState(listEl,false);return;}
   listEl.innerHTML=items.map(function(m){
     var sc=(m.code||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     var sn=(m.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     return '<div class="ac-item" onclick="'+onSelect+'(\''+sc+'\',\''+sn+'\')">'+'<b>'+(m.name||'')+'</b><span>'+(m.code||'')+(m.spec?' · '+m.spec:'')+(m.unit?' ['+m.unit+']':'')+'</span></div>';
   }).join('');
   listEl.classList.add('open');
+  setAcOpenState(listEl,true);
 }
 
 /* ── 바코드 스캐너 Enter 처리 (입출고) ── */
@@ -2517,15 +2541,13 @@ function onEdENameInput(v){
 function selectAcEdE(code,name){
   document.getElementById('edE_code').value=code;
   document.getElementById('edE_name').value=name;
-  var cl=document.getElementById('edE_acListCode');if(cl)cl.classList.remove('open');
-  var nl=document.getElementById('edE_acListName');if(nl)nl.classList.remove('open');
+  closeAllAcLists();
 }
 /* ── 입출고등록: 품목 선택 → txCode/txName 채움 ── */
 function selectAcTx(code,name){
   document.getElementById('txCode').value=code;
   document.getElementById('txName').value=name;
-  document.getElementById('acList').classList.remove('open');
-  var cl=document.getElementById('acListCode');if(cl)cl.classList.remove('open');
+  closeAllAcLists();
   showStockPrev(code);onQtyInput();
 }
 /* ── 입출고등록: 하위호환용 래퍼 ── */
@@ -2540,16 +2562,11 @@ function selectAcM(code,name){
     document.getElementById('mUnit').value=m.unit||'EA';
     document.getElementById('mSafety').value=m.safety||0;
   }
-  var cl=document.getElementById('mAcListCode'),nl=document.getElementById('mAcListName');
-  if(cl)cl.classList.remove('open');if(nl)nl.classList.remove('open');
+  closeAllAcLists();
 }
 /* ── 외부 클릭 시 모든 ac-list 닫기 ── */
 document.addEventListener('click',function(e){
-  if(!e.target.closest('.ac-wrap')){
-    ['acList','acListCode','mAcListCode','mAcListName','edE_acListCode','edE_acListName'].forEach(function(id){
-      var el=document.getElementById(id);if(el)el.classList.remove('open');
-    });
-  }
+  if(!e.target.closest('.ac-wrap')) closeAllAcLists();
 });
 
 async function saveTx(){
