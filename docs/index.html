@@ -4118,7 +4118,7 @@ function hideSugg() {
 (function(){
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function(){
-      navigator.serviceWorker.register('./sw.js')
+      navigator.serviceWorker.register('./sw.js?v=20260605')
         .then(function(reg){ console.log('ServiceWorker registered:', reg.scope); })
         .catch(function(err){ console.warn('ServiceWorker registration failed:', err); });
     });
