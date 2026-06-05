@@ -1,8 +1,10 @@
 /* KY 재고관리 안정형 PWA Service Worker */
-const CACHE_NAME = 'ky-inventory-cache-v4-20260605-loginusers';
+const CACHE_NAME = 'ky-inventory-cache-v2-20260603';
 const CACHE_PREFIX = 'ky-inventory-cache-';
 
 const APP_SHELL = [
+  './',
+  './index.html',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -65,16 +67,6 @@ self.addEventListener('fetch', function(event) {
     return;
   }
 
-  // sw.js: 항상 네트워크 우선 (구버전 SW 고착 방지)
-  if (/\/sw\.js(\?|$)/i.test(req.url)) {
-    event.respondWith(
-      fetch(req, { cache: 'no-store' }).catch(function() {
-        return caches.match(req);
-      })
-    );
-    return;
-  }
-
   // index.html / 문서: 네트워크 우선 (최신 배포 반영)
   if (isHtmlRequest(req)) {
     event.respondWith(
@@ -83,13 +75,13 @@ self.addEventListener('fetch', function(event) {
           if (res && res.ok) {
             var copy = res.clone();
             caches.open(CACHE_NAME).then(function(cache) {
-              cache.put(req, copy);
+              cache.put('./index.html', copy);
             });
           }
           return res;
         })
         .catch(function() {
-          return caches.match(req);
+          return caches.match('./index.html');
         })
     );
     return;
