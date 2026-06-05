@@ -64,15 +64,15 @@ html,body{height:100%;font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-ser
 .login-sub{color:rgba(255,255,255,.45);font-size:13px;margin-bottom:32px}
 .login-footer{color:rgba(255,255,255,.2);font-size:11px;margin-top:16px;text-align:center}
 .lf{margin-bottom:14px;text-align:left}
-.lf label{color:rgba(255,255,255,.55);font-size:11.5px;font-weight:700;display:block;margin-bottom:6px;letter-spacing:.04em;text-transform:uppercase}
+.lf label{color:rgba(255,255,255,.55);font-size:11.5px;font-weight:700;display:block;margin-bottom:6px;letter-spacing:normal;text-transform:none}
 .lf input{width:100%;padding:13px 16px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.16);border-radius:12px;color:#f1f5f9;font-size:14px;outline:none;font-family:inherit;transition:border .15s,background .15s;letter-spacing:normal;text-transform:none;word-spacing:normal;font-variant:normal}
+#loginId,#loginPw{letter-spacing:0!important;text-transform:none!important;word-spacing:0!important;font-family:system-ui,-apple-system,'Segoe UI',sans-serif!important;font-variant:normal!important;font-feature-settings:normal!important;text-rendering:auto!important;transform:none!important}
 .lf input:focus{border-color:rgba(255,255,255,.45);background:rgba(255,255,255,.14)}
 .lf input::placeholder{color:rgba(255,255,255,.28)}
 #loginBtn{width:100%;padding:14px;background:linear-gradient(135deg,var(--cp),var(--cp-d));color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-top:8px;font-family:inherit;box-shadow:0 4px 16px rgba(37,99,235,.35);transition:opacity .15s,transform .1s}
 #loginBtn:hover{opacity:.92;transform:translateY(-1px)}
 #loginBtn:active{transform:translateY(0)}
-#loginQuickAdminBtn{width:100%;padding:12px;margin-top:10px;background:rgba(255,255,255,.12);color:#e2e8f0;border:1px solid rgba(255,255,255,.28);border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s,background .15s}
-#loginQuickAdminBtn:hover{background:rgba(255,255,255,.18)}
+#loginQuickAdminBtn{display:none!important}
 #loginErr{color:#fca5a5;font-size:13px;margin-top:12px;display:none;font-weight:600}
 
 /* ── 앱 레이아웃 ── */
@@ -1068,13 +1068,13 @@ tr:hover td{background:#fafbfc}
 <body>
 
 <!-- ══ 로그인 화면 ══ -->
-<div id="loginScreen">
+<div id="loginScreen" translate="no">
   <div class="login-wrap">
     <div class="login-box">
       <div class="login-logo" id="loginLogo">KY</div>
       <h2 id="loginTitle">KY 재고관리</h2>
       <div class="login-sub" id="loginSub">스마트공장 재고·물류관리 시스템</div>
-      <div class="lf"><label>아이디</label><input id="loginId" type="text" placeholder="아이디 입력" autocomplete="username" spellcheck="false" autocapitalize="off" autocorrect="off" oninput="onLoginIdInput(this)"></div>
+      <div class="lf"><label>아이디</label><input id="loginId" type="text" placeholder="아이디 입력" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off" inputmode="verbatim" oninput="onLoginIdInput(this)"></div>
       <div class="lf"><label>비밀번호</label><input id="loginPw" type="password" placeholder="비밀번호 입력" autocomplete="current-password" spellcheck="false" autocapitalize="off" autocorrect="off"></div>
       <button type="button" id="loginBtn" onclick="doLogin()">로그인</button>
       <button type="button" id="loginQuickAdminBtn" onclick="quickAdminLogin()">관리자 바로 로그인</button>
@@ -1930,10 +1930,16 @@ function kyGetUsers() {
 function kySetUsers(arr) {
   try { localStorage.setItem(KY_USERS_KEY, JSON.stringify(arr)); } catch(e) {}
 }
-function kyGetUserById(id) {
+function kyFindLoginUser(id) {
+  var nid = normalizeLoginId(id);
+  if (!nid) return null;
   var list = kyGetUsers();
-  for (var i = 0; i < list.length; i++) { if (list[i].id === id) return list[i]; }
+  for (var i = 0; i < list.length; i++) { if (normalizeLoginId(list[i].id) === nid) return list[i]; }
+  for (var j = 0; j < CONFIG.USERS.length; j++) { if (normalizeLoginId(CONFIG.USERS[j].id) === nid) return CONFIG.USERS[j]; }
   return null;
+}
+function kyGetUserById(id) {
+  return kyFindLoginUser(id);
 }
 function kySaveSession(user) {
   try {
@@ -1979,7 +1985,7 @@ function kyRestoreSession() {
 })();
 
 function normalizeLoginId(v){
-  return String(v||'').replace(/\s+/g,'').trim();
+  return String(v||'').replace(/\s+/g,'').toLowerCase().trim();
 }
 function normalizeLoginPw(v){
   return String(v||'').trim();
@@ -1995,9 +2001,7 @@ function doLogin(){
   var errEl=document.getElementById('loginErr');
   if(!id){errEl.textContent='아이디를 입력해주세요.';errEl.style.display='block';return;}
   if(!pw){errEl.textContent='비밀번호를 입력해주세요.';errEl.style.display='block';return;}
-  var user=null;
-  var users=kyGetUsers();
-  for(var i=0;i<users.length;i++){if(users[i].id===id){user=users[i];break;}}
+  var user=kyFindLoginUser(id);
   if(!user){errEl.textContent='❌ 아이디가 올바르지 않습니다.';errEl.style.display='block';return;}
   if(user.pw!==pw){errEl.textContent='❌ 비밀번호가 올바르지 않습니다.';errEl.style.display='block';return;}
   errEl.style.display='none';
@@ -4161,7 +4165,7 @@ function hideSugg() {
 (function(){
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function(){
-      navigator.serviceWorker.register('./sw.js?v=20260605-loginfix')
+      navigator.serviceWorker.register('./sw.js?v=20260605-loginrecover')
         .then(function(reg){ console.log('ServiceWorker registered:', reg.scope); })
         .catch(function(err){ console.warn('ServiceWorker registration failed:', err); });
     });
