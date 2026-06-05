@@ -17,6 +17,8 @@
 <meta http-equiv="Expires" content="0">
 <script>
 (function(){
+  var KY_BUILD='20260605-edgefix-v4';
+  var RECOVER_KEY='ky_inv_recover_v4';
   function kyIsStaleHtml(){
     if(typeof normalizeLoginId==='function'){
       var el=document.getElementById('loginId');
@@ -27,15 +29,43 @@
     if(typeof doLogin==='function'&&doLogin.toString().indexOf('normalizeLoginId')>=0)return false;
     return true;
   }
-  function kyForceFreshHtml(){
-    try{if(sessionStorage.getItem('ky_inv_recover_v3'))return;sessionStorage.setItem('ky_inv_recover_v3','1');}catch(e){}
-    var u=location.pathname+location.search;
-    var sep=(location.search?'&':'?');
-    location.replace(u+sep+'_recover='+Date.now());
+  function kyPurgeSwCaches(){
+    if(!('caches' in window))return Promise.resolve();
+    return caches.keys().then(function(keys){
+      return Promise.all(keys.filter(function(k){return k.indexOf('ky-inventory-cache-')===0;}).map(function(k){return caches.delete(k);}));
+    }).catch(function(){});
   }
+  function kyUnregisterSw(){
+    if(!('serviceWorker' in navigator))return Promise.resolve();
+    return navigator.serviceWorker.getRegistrations().then(function(regs){
+      return Promise.all(regs.map(function(r){return r.unregister();}));
+    }).catch(function(){});
+  }
+  function kyForceRecover(){
+    try{if(sessionStorage.getItem(RECOVER_KEY))return;sessionStorage.setItem(RECOVER_KEY,'1');}catch(e){}
+    Promise.all([kyUnregisterSw(),kyPurgeSwCaches()]).then(function(){
+      var u=location.pathname+location.search;
+      var sep=(location.search?'&':'?');
+      location.replace(u+sep+'_recover='+Date.now());
+    });
+  }
+  function kyNeedsRecover(){
+    if(kyIsStaleHtml())return true;
+    try{if(localStorage.getItem('ky_build_seen')!==KY_BUILD)return true;}catch(e){return true;}
+    return false;
+  }
+  try{
+    if(localStorage.getItem('ky_build_seen')!==KY_BUILD){
+      kyUnregisterSw();
+      kyPurgeSwCaches();
+    }
+  }catch(e){}
   document.addEventListener('DOMContentLoaded',function(){
-    if(kyIsStaleHtml()){kyForceFreshHtml();return;}
-    try{sessionStorage.removeItem('ky_inv_recover_v3');}catch(e){}
+    if(kyNeedsRecover()){kyForceRecover();return;}
+    try{
+      sessionStorage.removeItem(RECOVER_KEY);
+      localStorage.setItem('ky_build_seen',KY_BUILD);
+    }catch(e){}
   });
 })();
 </script>
@@ -4022,8 +4052,11 @@ function hideSugg() {
 (function(){
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function(){
-      navigator.serviceWorker.register('./sw.js?v=3')
-        .then(function(reg){ console.log('ServiceWorker registered:', reg.scope); })
+      navigator.serviceWorker.register('./sw.js?v=4', { updateViaCache: 'none' })
+        .then(function(reg){
+          reg.update();
+          console.log('ServiceWorker registered:', reg.scope);
+        })
         .catch(function(err){ console.warn('ServiceWorker registration failed:', err); });
     });
   }

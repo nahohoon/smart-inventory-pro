@@ -1,10 +1,9 @@
 /* KY 재고관리 안정형 PWA Service Worker */
-const CACHE_NAME = 'ky-inventory-cache-v3';
+const CACHE_NAME = 'ky-inventory-cache-v4';
 const CACHE_PREFIX = 'ky-inventory-cache-';
 
+/* HTML(./, ./index.html)은 캐시하지 않음 — navigate는 항상 네트워크 */
 const APP_SHELL = [
-  './',
-  './index.html',
   './manifest.json',
   './icons/icon-192.png',
   './icons/icon-512.png'
@@ -25,14 +24,26 @@ self.addEventListener('activate', event => {
           .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
           .map(key => caches.delete(key))
       )
-    ).then(() => self.clients.claim())
+    )
+      .then(() => self.clients.claim())
+      .then(() => self.clients.matchAll({ type: 'window', includeUncontrolled: true }))
+      .then(clients =>
+        Promise.all(
+          clients.map(client => {
+            try {
+              return client.navigate(client.url);
+            } catch (e) {
+              return Promise.resolve();
+            }
+          })
+        )
+      )
   );
 });
 
 self.addEventListener('fetch', event => {
   const req = event.request;
 
-  // Apps Script 및 외부 API는 캐시 제외
   if (
     req.method !== 'GET' ||
     req.url.includes('script.google.com') ||
@@ -41,21 +52,22 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // HTML은 네트워크 우선
+  /* SW 스크립트: 항상 최신본 */
+  if (req.url.includes('sw.js')) {
+    event.respondWith(fetch(req, { cache: 'no-store' }));
+    return;
+  }
+
+  /* HTML 문서: 네트워크 전용 (캐시 저장/폴백 없음) */
   if (req.mode === 'navigate' || req.destination === 'document') {
     event.respondWith(
-      fetch(req)
-        .then(res => {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put('./index.html', copy));
-          return res;
-        })
-        .catch(() => caches.match('./index.html'))
+      fetch(req, { cache: 'no-store' }).catch(() =>
+        fetch(req, { cache: 'reload' })
+      )
     );
     return;
   }
 
-  // 나머지는 캐시 우선
   event.respondWith(
     caches.match(req).then(cached => {
       return (
