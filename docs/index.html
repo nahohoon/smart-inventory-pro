@@ -217,10 +217,13 @@ tr:hover td{background:#fafbfc}
 .ac-wrap{position:relative}
 .ac-wrap.ac-open{z-index:400}
 .frow.ac-row-open,.frow3.ac-row-open,.frow4.ac-row-open,.modal-frow.ac-row-open{position:relative;z-index:400}
-.card:has(.ac-list.open),.card-bd:has(.ac-list.open){overflow:visible}
-.modal-box:has(.ac-list.open){overflow:visible}
+.card:has(.ac-wrap.ac-open),.card-bd:has(.ac-wrap.ac-open){overflow:visible}
+.modal-box:has(.ac-wrap.ac-open){overflow:visible}
 .ac-list{display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #93c5fd;border-top:none;border-radius:0 0 10px 10px;z-index:401;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.12)}
 .ac-list.open{display:block}
+/* body 고정 포털 — overflow/stacking 탈출 */
+#acFloatList.ac-list.ac-float{display:none;position:fixed;left:0;top:0;right:auto;width:auto;z-index:9500;max-height:240px;overflow-y:auto;border:1.5px solid #93c5fd;border-radius:0 0 10px 10px;background:#fff;box-shadow:0 12px 32px rgba(0,0,0,.18)}
+#acFloatList.ac-list.ac-float.open{display:block}
 .ac-item{padding:9px 12px;font-size:13px;cursor:pointer;border-bottom:1px solid #f1f5f9}
 .ac-item:hover{background:#eff6ff}
 .ac-item b{color:#0f172a}.ac-item span{color:#94a3b8;font-size:11px;margin-left:8px}
@@ -2451,9 +2454,14 @@ function findMasterByCodeNormalized(code) {
   return null;
 }
 
+var _acActive=null;
 function acWrapOf(listEl){
   var p=listEl&&listEl.parentElement;
   return p&&p.classList.contains('ac-wrap')?p:null;
+}
+function getAcInputForList(listEl){
+  var wrap=acWrapOf(listEl);
+  return wrap?wrap.querySelector('input'):null;
 }
 function setAcOpenState(listEl,open){
   var wrap=acWrapOf(listEl);
@@ -2461,7 +2469,32 @@ function setAcOpenState(listEl,open){
   if(wrap)wrap.classList.toggle('ac-open',!!open);
   if(row)row.classList.toggle('ac-row-open',!!open);
 }
+function ensureAcFloatList(){
+  var el=document.getElementById('acFloatList');
+  if(!el){
+    el=document.createElement('div');
+    el.id='acFloatList';
+    el.className='ac-list ac-float';
+    document.body.appendChild(el);
+  }
+  return el;
+}
+function positionAcFloatList(floatEl,input){
+  if(!floatEl||!input)return;
+  var r=input.getBoundingClientRect();
+  floatEl.style.left=Math.round(r.left)+'px';
+  floatEl.style.top=Math.round(r.bottom)+'px';
+  floatEl.style.width=Math.round(r.width)+'px';
+}
+function repositionAcFloatList(){
+  var floatEl=document.getElementById('acFloatList');
+  if(!floatEl||!floatEl.classList.contains('open')||!_acActive||!_acActive.input)return;
+  positionAcFloatList(floatEl,_acActive.input);
+}
 function closeAllAcLists(){
+  var floatEl=document.getElementById('acFloatList');
+  if(floatEl){floatEl.classList.remove('open');floatEl.innerHTML='';}
+  _acActive=null;
   ['acList','acListCode','mAcListCode','mAcListName','edE_acListCode','edE_acListName'].forEach(function(id){
     var el=document.getElementById(id);
     if(!el)return;
@@ -2470,16 +2503,26 @@ function closeAllAcLists(){
     setAcOpenState(el,false);
   });
 }
-/* ── 자동완성 공통: 후보 목록 렌더 ── */
+/* ── 자동완성 공통: body 포털에 후보 목록 렌더 ── */
 function renderAcList(listEl,items,onSelect){
-  if(!items.length){listEl.classList.remove('open');listEl.innerHTML='';setAcOpenState(listEl,false);return;}
-  listEl.innerHTML=items.map(function(m){
+  if(!listEl)return;
+  var input=getAcInputForList(listEl);
+  var floatEl=ensureAcFloatList();
+  if(!items.length){
+    if(_acActive&&_acActive.sourceListId===listEl.id)closeAllAcLists();
+    else setAcOpenState(listEl,false);
+    return;
+  }
+  closeAllAcLists();
+  floatEl.innerHTML=items.map(function(m){
     var sc=(m.code||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     var sn=(m.name||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     return '<div class="ac-item" onclick="'+onSelect+'(\''+sc+'\',\''+sn+'\')">'+'<b>'+(m.name||'')+'</b><span>'+(m.code||'')+(m.spec?' · '+m.spec:'')+(m.unit?' ['+m.unit+']':'')+'</span></div>';
   }).join('');
-  listEl.classList.add('open');
+  floatEl.classList.add('open');
+  _acActive={input:input,sourceListId:listEl.id};
   setAcOpenState(listEl,true);
+  positionAcFloatList(floatEl,input);
 }
 
 /* ── 바코드 스캐너 Enter 처리 (입출고) ── */
@@ -2488,8 +2531,7 @@ function onCodeEnter(v, ctx) {
     var exactMatch = findMasterByCodeNormalized(v);
     if (exactMatch) {
       document.getElementById('txName').value = exactMatch.name;
-      var list = document.getElementById('acListCode');
-      if (list) list.classList.remove('open');
+      closeAllAcLists();
       showStockPrev(exactMatch.code);
       onQtyInput();
       // 수량 입력창으로 포커스 이동
@@ -2503,7 +2545,7 @@ function onCodeInput(v, ctx) {
   var listId = ctx === 'tx' ? 'acListCode' : (ctx === 'edE' ? 'edE_acListCode' : 'mAcListCode');
   var list = document.getElementById(listId);
   if (!list) return;
-  if (!v) { list.classList.remove('open'); return; }
+  if (!v) { closeAllAcLists(); return; }
 
   var hits = filterMasterAutocomplete(v, 8);
 
@@ -2523,18 +2565,19 @@ function onCodeInput(v, ctx) {
 /* ── 품목등록: 품목명 입력 자동완성 ── */
 function onMNameInput(v){
   var list=document.getElementById('mAcListName');if(!list)return;
-  if(!v){list.classList.remove('open');return;}
+  if(!v){closeAllAcLists();return;}
   renderAcList(list,filterMasterAutocomplete(v,8),'selectAcM');
 }
 /* ── 입출고등록: 품목명 입력 자동완성 (기존 onNameInput 강화) ── */
 function onNameInput(v){
-  var list=document.getElementById('acList');if(!v){list.classList.remove('open');return;}
+  var list=document.getElementById('acList');if(!list)return;
+  if(!v){closeAllAcLists();return;}
   renderAcList(list,filterMasterAutocomplete(v,8),'selectAcTx');
 }
 /* ── 거래 수정: 품목명 입력 자동완성 ── */
 function onEdENameInput(v){
   var list=document.getElementById('edE_acListName');if(!list)return;
-  if(!v){list.classList.remove('open');return;}
+  if(!v){closeAllAcLists();return;}
   renderAcList(list,filterMasterAutocomplete(v,8),'selectAcEdE');
 }
 /* ── 거래 수정: 품목 선택 → edE_code/edE_name 채움 ── */
@@ -2566,8 +2609,10 @@ function selectAcM(code,name){
 }
 /* ── 외부 클릭 시 모든 ac-list 닫기 ── */
 document.addEventListener('click',function(e){
-  if(!e.target.closest('.ac-wrap')) closeAllAcLists();
+  if(!e.target.closest('.ac-wrap')&&!e.target.closest('#acFloatList')) closeAllAcLists();
 });
+window.addEventListener('scroll',repositionAcFloatList,true);
+window.addEventListener('resize',repositionAcFloatList);
 
 async function saveTx(){
   var txDateEl=document.getElementById('txDate');
