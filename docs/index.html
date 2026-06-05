@@ -12,6 +12,34 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<script>
+(function(){
+  function kyIsStaleHtml(){
+    if(typeof normalizeLoginId==='function'){
+      var el=document.getElementById('loginId');
+      if(el&&String(el.getAttribute('oninput')||'').indexOf('onLoginIdInput')>=0){
+        if(typeof doLogin==='function'&&doLogin.toString().indexOf('normalizeLoginId')>=0)return false;
+      }
+    }
+    if(typeof doLogin==='function'&&doLogin.toString().indexOf('normalizeLoginId')>=0)return false;
+    return true;
+  }
+  function kyForceFreshHtml(){
+    try{if(sessionStorage.getItem('ky_inv_recover_v3'))return;sessionStorage.setItem('ky_inv_recover_v3','1');}catch(e){}
+    var u=location.pathname+location.search;
+    var sep=(location.search?'&':'?');
+    location.replace(u+sep+'_recover='+Date.now());
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    if(kyIsStaleHtml()){kyForceFreshHtml();return;}
+    try{sessionStorage.removeItem('ky_inv_recover_v3');}catch(e){}
+  });
+})();
+</script>
+
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>KY 재고관리</title>
 
@@ -3994,7 +4022,7 @@ function hideSugg() {
 (function(){
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', function(){
-      navigator.serviceWorker.register('./sw.js?v=2')
+      navigator.serviceWorker.register('./sw.js?v=3')
         .then(function(reg){ console.log('ServiceWorker registered:', reg.scope); })
         .catch(function(err){ console.warn('ServiceWorker registration failed:', err); });
     });
