@@ -2518,13 +2518,16 @@ function onCodeInput(v, ctx) {
 function onMNameInput(v){
   var list=document.getElementById('mAcListName');if(!list)return;
   if(!v){list.classList.remove('open');return;}
-  var hits=getMaster().filter(function(m){return(m.name||'').indexOf(v)>=0||(m.code||'').indexOf(v)>=0;}).slice(0,8);
+  var q=normalizeStr(v);
+  var hits=getMaster().filter(function(m){return normalizeStr(m.name).indexOf(q)>=0||normalizeStr(m.code).indexOf(q)>=0;}).slice(0,8);
   renderAcList(list,hits,'selectAcM');
 }
 /* ── 입출고등록: 품목명 입력 자동완성 (기존 onNameInput 강화) ── */
+function normalizeStr(s){return String(s||'').toLowerCase().replace(/\s+/g,'');}
 function onNameInput(v){
   var list=document.getElementById('acList');if(!v){list.classList.remove('open');return;}
-  var items=getMaster().filter(function(m){return(m.name||'').indexOf(v)>=0||(m.code||'').indexOf(v)>=0;}).slice(0,8);
+  var q=normalizeStr(v);
+  var items=getMaster().filter(function(m){return normalizeStr(m.name).indexOf(q)>=0||normalizeStr(m.code).indexOf(q)>=0;}).slice(0,8);
   renderAcList(list,items,'selectAcTx');
 }
 /* ── 입출고등록: 품목 선택 → txCode/txName 채움 ── */
